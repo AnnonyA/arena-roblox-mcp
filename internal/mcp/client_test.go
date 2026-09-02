@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 )
@@ -17,6 +18,10 @@ func (s *fakeSession) ListTools(context.Context) ([]Tool, error) {
 	defer s.mu.Unlock()
 	s.listCalls++
 	return []Tool{{Name: "read_script"}}, nil
+}
+
+func (s *fakeSession) CallTool(context.Context, string, json.RawMessage) (ToolResult, error) {
+	return ToolResult{}, nil
 }
 
 func (s *fakeSession) Close() error {

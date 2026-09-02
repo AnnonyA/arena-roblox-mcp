@@ -2,11 +2,19 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 )
 
+type ToolResult struct {
+	Content           json.RawMessage
+	StructuredContent json.RawMessage
+	IsError           bool
+}
+
 type Session interface {
 	ListTools(context.Context) ([]Tool, error)
+	CallTool(context.Context, string, json.RawMessage) (ToolResult, error)
 	Close() error
 }
 
@@ -27,6 +35,14 @@ func NewClient(connect ConnectFunc) *Client {
 
 func (c *Client) Tools(ctx context.Context) ([]Tool, error) {
 	return c.registry.Tools(ctx)
+}
+
+func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMessage) (ToolResult, error) {
+	session, err := c.ensureSession(ctx)
+	if err != nil {
+		return ToolResult{}, err
+	}
+	return session.CallTool(ctx, name, arguments)
 }
 
 func (c *Client) Close() error {

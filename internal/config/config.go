@@ -43,7 +43,15 @@ func Default() Config {
 			ContextBudget: "balanced",
 			SafeMode:      true,
 		},
-		MCPServers: map[string]MCPServerConfig{},
+		MCPServers: map[string]MCPServerConfig{
+			"Roblox_Studio": {
+				Command: "cmd.exe",
+				Args: []string{
+					"/c",
+					`%LOCALAPPDATA%\Roblox\mcp.bat`,
+				},
+			},
+		},
 	}
 }
 
@@ -51,6 +59,9 @@ func Load(path string) (Config, error) {
 	cfg := Default()
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return cfg, nil
+		}
 		return Config{}, err
 	}
 	if err := json.Unmarshal(data, &cfg); err != nil {

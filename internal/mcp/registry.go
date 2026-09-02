@@ -57,7 +57,8 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		r.mu.Unlock()
 		tools, err := r.discover(ctx)
 		r.mu.Lock()
-		if err == nil && generation == r.generation {
+		stale := generation != r.generation
+		if err == nil && !stale {
 			r.tools = cloneTools(tools)
 			r.loaded = true
 		}
@@ -66,6 +67,9 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		r.mu.Unlock()
 		if err != nil {
 			return nil, err
+		}
+		if stale {
+			continue
 		}
 		return cloneTools(tools), nil
 	}

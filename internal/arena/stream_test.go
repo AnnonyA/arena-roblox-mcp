@@ -66,3 +66,44 @@ func TestStreamChatEmitsTextDeltas(t *testing.T) {
 		t.Fatalf("deltas = %#v", deltas)
 	}
 }
+
+func TestStreamChatRetriesRetryableHTTPStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		statusCode int
+		retryAfter string
+	}{
+		{name: "rate limited", statusCode: http.StatusTooManyRequests, retryAfter: "0"},
+		{name: "server unavailable", statusCode: http.StatusServiceUnavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			attempts := 0
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				attempts++
+				if attempts == 1 {
+					if tc.retryAfter != "" {
+						w.Header().Set("Retry-After", tc.retryAfter)
+					}
+					w.WriteHeader(tc.statusCode)
+					return
+				}
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"))
+				_, _ = w.Write([]byte("data: [DONE]\n\n"))
+			}))
+			defer srv.Close()
+
+			c := NewClient(ClientOptions{BaseURL: srv.URL})
+			got, err := c.StreamChat(context.Background(), ChatRequest{Model: "model-a"}, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if attempts != 2 {
+				t.Fatalf("attempts = %d, want 2", attempts)
+			}
+			if got.Text != "ok" {
+				t.Fatalf("text = %q, want ok", got.Text)
+			}
+		})
+	}
+}

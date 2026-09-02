@@ -6,8 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Message struct {
@@ -53,24 +56,37 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	if err != nil {
 		return ChatResult{}, fmt.Errorf("encode Arena chat request: %w", err)
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
-	if err != nil {
-		return ChatResult{}, fmt.Errorf("build Arena chat request: %w", err)
-	}
-	httpReq.Header.Set("Accept", "text/event-stream")
-	httpReq.Header.Set("Content-Type", "application/json")
-	if c.apiKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-	}
 
-	resp, err := c.http.Do(httpReq)
-	if err != nil {
-		return ChatResult{}, fmt.Errorf("stream Arena chat: %w", err)
+	var resp *http.Response
+	for attempt := 0; attempt < 3; attempt++ {
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/chat/completions", bytes.NewReader(body))
+		if err != nil {
+			return ChatResult{}, fmt.Errorf("build Arena chat request: %w", err)
+		}
+		httpReq.Header.Set("Accept", "text/event-stream")
+		httpReq.Header.Set("Content-Type", "application/json")
+		if c.apiKey != "" {
+			httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+		}
+
+		resp, err = c.http.Do(httpReq)
+		if err != nil {
+			return ChatResult{}, fmt.Errorf("stream Arena chat: %w", err)
+		}
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			break
+		}
+		if attempt == 2 || !retryableStatus(resp.StatusCode) {
+			defer resp.Body.Close()
+			return ChatResult{}, fmt.Errorf("Arena chat request failed with HTTP %d", resp.StatusCode)
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+		if err := waitRetry(ctx, resp.Header.Get("Retry-After")); err != nil {
+			return ChatResult{}, fmt.Errorf("wait to retry Arena chat: %w", err)
+		}
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return ChatResult{}, fmt.Errorf("Arena chat request failed with HTTP %d", resp.StatusCode)
-	}
 
 	var result ChatResult
 	calls := map[int]*ToolCall{}
@@ -122,4 +138,33 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		}
 	}
 	return result, nil
+}
+
+func retryableStatus(status int) bool {
+	return status == http.StatusTooManyRequests || status >= 500
+}
+
+func waitRetry(ctx context.Context, retryAfter string) error {
+	delay := retryAfterDelay(retryAfter, time.Now())
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func retryAfterDelay(value string, now time.Time) time.Duration {
+	if seconds, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+	if at, err := http.ParseTime(value); err == nil && at.After(now) {
+		return at.Sub(now)
+	}
+	return 0
 }

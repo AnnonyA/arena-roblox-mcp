@@ -17,30 +17,26 @@ type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content,omitempty"`
 }
-
 type FunctionCall struct {
 	Name      string `json:"name"`
 	Arguments string `json:"arguments"`
 }
-
 type ToolCall struct {
 	Index    int          `json:"index,omitempty"`
 	ID       string       `json:"id,omitempty"`
 	Type     string       `json:"type,omitempty"`
 	Function FunctionCall `json:"function"`
 }
-
 type ChatRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages,omitempty"`
-	Stream   bool      `json:"stream"`
+	Model    string           `json:"model"`
+	Messages []Message        `json:"messages,omitempty"`
+	Tools    []ToolDefinition `json:"tools,omitempty"`
+	Stream   bool             `json:"stream"`
 }
-
 type ChatResult struct {
 	Text      string
 	ToolCalls []ToolCall
 }
-
 type streamChunk struct {
 	Choices []struct {
 		Delta struct {

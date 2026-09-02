@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -128,10 +129,13 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	if err := scanner.Err(); err != nil {
 		return ChatResult{}, fmt.Errorf("read Arena stream: %w", err)
 	}
-	for i := 0; i < len(calls); i++ {
-		if call := calls[i]; call != nil {
-			result.ToolCalls = append(result.ToolCalls, *call)
-		}
+	indexes := make([]int, 0, len(calls))
+	for index := range calls {
+		indexes = append(indexes, index)
+	}
+	sort.Ints(indexes)
+	for _, index := range indexes {
+		result.ToolCalls = append(result.ToolCalls, *calls[index])
 	}
 	return result, nil
 }

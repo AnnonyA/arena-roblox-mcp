@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestRegistryCachesSuccessfulDiscovery(t *testing.T) {
@@ -77,5 +79,56 @@ func TestRegistryReturnsDefensiveSchemaCopies(t *testing.T) {
 	}
 	if string(second[0].InputSchema) != `{"type":"object"}` {
 		t.Fatalf("cached schema mutated: %q", second[0].InputSchema)
+	}
+}
+
+func TestRegistryWaiterCanCancelDuringDiscovery(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	firstDone := make(chan error, 1)
+	var calls atomic.Int32
+
+	registry := NewRegistry(func(context.Context) ([]Tool, error) {
+		if calls.Add(1) == 1 {
+			close(started)
+		}
+		<-release
+		return []Tool{{Name: "read_script"}}, nil
+	})
+
+	go func() {
+		_, err := registry.Tools(context.Background())
+		firstDone <- err
+	}()
+
+	<-started
+
+	ctx, cancel := context.WithCancel(context.Background())
+	secondDone := make(chan error, 1)
+	go func() {
+		_, err := registry.Tools(ctx)
+		secondDone <- err
+	}()
+	cancel()
+
+	select {
+	case err := <-secondDone:
+		if !errors.Is(err, context.Canceled) {
+			close(release)
+			<-firstDone
+			t.Fatalf("second Tools error = %v, want context.Canceled", err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		close(release)
+		<-firstDone
+		t.Fatal("second Tools ignored cancellation while discovery was in progress")
+	}
+
+	close(release)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first Tools: %v", err)
+	}
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("discovery calls = %d, want 1", got)
 	}
 }

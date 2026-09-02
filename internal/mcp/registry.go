@@ -19,6 +19,7 @@ type Registry struct {
 	discover DiscoverFunc
 	tools    []Tool
 	loaded   bool
+	inFlight chan struct{}
 }
 
 func NewRegistry(discover DiscoverFunc) *Registry {
@@ -26,21 +27,47 @@ func NewRegistry(discover DiscoverFunc) *Registry {
 }
 
 func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	for {
+		r.mu.Lock()
 
-	if r.loaded {
-		return cloneTools(r.tools), nil
+		if r.loaded {
+			tools := cloneTools(r.tools)
+			r.mu.Unlock()
+			return tools, nil
+		}
+
+		if r.inFlight != nil {
+			inFlight := r.inFlight
+			r.mu.Unlock()
+
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-inFlight:
+				continue
+			}
+		}
+
+		inFlight := make(chan struct{})
+		r.inFlight = inFlight
+		r.mu.Unlock()
+
+		tools, err := r.discover(ctx)
+
+		r.mu.Lock()
+		if err == nil {
+			r.tools = cloneTools(tools)
+			r.loaded = true
+		}
+		r.inFlight = nil
+		close(inFlight)
+		r.mu.Unlock()
+
+		if err != nil {
+			return nil, err
+		}
+		return cloneTools(tools), nil
 	}
-
-	tools, err := r.discover(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	r.tools = cloneTools(tools)
-	r.loaded = true
-	return cloneTools(r.tools), nil
 }
 
 func cloneTools(tools []Tool) []Tool {

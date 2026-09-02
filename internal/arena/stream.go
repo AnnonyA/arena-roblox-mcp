@@ -89,6 +89,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	calls := map[int]*ToolCall{}
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	done := false
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !strings.HasPrefix(line, "data:") {
@@ -99,6 +100,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 			continue
 		}
 		if payload == "[DONE]" {
+			done = true
 			break
 		}
 
@@ -128,6 +130,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	}
 	if err := scanner.Err(); err != nil {
 		return ChatResult{}, fmt.Errorf("read Arena stream: %w", err)
+	}
+	if !done {
+		return ChatResult{}, fmt.Errorf("Arena stream ended before [DONE]")
 	}
 	indexes := make([]int, 0, len(calls))
 	for index := range calls {

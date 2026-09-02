@@ -3,8 +3,11 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 )
+
+var ErrNoDiscoverer = errors.New("mcp tool discoverer is not configured")
 
 type Tool struct {
 	Name        string
@@ -22,24 +25,24 @@ type Registry struct {
 	inFlight chan struct{}
 }
 
-func NewRegistry(discover DiscoverFunc) *Registry {
-	return &Registry{discover: discover}
-}
+func NewRegistry(discover DiscoverFunc) *Registry { return &Registry{discover: discover} }
 
 func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 	for {
 		r.mu.Lock()
-
 		if r.loaded {
 			tools := cloneTools(r.tools)
 			r.mu.Unlock()
 			return tools, nil
 		}
+		if r.discover == nil {
+			r.mu.Unlock()
+			return nil, ErrNoDiscoverer
+		}
 
 		if r.inFlight != nil {
 			inFlight := r.inFlight
 			r.mu.Unlock()
-
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -47,13 +50,10 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 				continue
 			}
 		}
-
 		inFlight := make(chan struct{})
 		r.inFlight = inFlight
 		r.mu.Unlock()
-
 		tools, err := r.discover(ctx)
-
 		r.mu.Lock()
 		if err == nil {
 			r.tools = cloneTools(tools)
@@ -62,7 +62,6 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		r.inFlight = nil
 		close(inFlight)
 		r.mu.Unlock()
-
 		if err != nil {
 			return nil, err
 		}

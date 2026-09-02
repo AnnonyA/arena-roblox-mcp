@@ -148,3 +148,14 @@ func TestClientRejectsMissingConnector(t *testing.T) {
 		t.Fatalf("Tools error = %v, want ErrNoConnector", err)
 	}
 }
+
+func TestClientRejectsNilSessionFromConnector(t *testing.T) {
+	client := NewClient(func(context.Context) (Session, error) {
+		return nil, nil
+	})
+
+	_, err := client.Tools(context.Background())
+	if !errors.Is(err, ErrNilSession) {
+		t.Fatalf("Tools error = %v, want ErrNilSession", err)
+	}
+}

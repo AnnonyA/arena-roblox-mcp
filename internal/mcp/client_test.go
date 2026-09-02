@@ -139,3 +139,12 @@ func TestClientWaiterCanCancelWhileConnectionIsInFlight(t *testing.T) {
 		t.Fatalf("first CallTool: %v", err)
 	}
 }
+
+func TestClientRejectsMissingConnector(t *testing.T) {
+	client := NewClient(nil)
+
+	_, err := client.Tools(context.Background())
+	if !errors.Is(err, ErrNoConnector) {
+		t.Fatalf("Tools error = %v, want ErrNoConnector", err)
+	}
+}

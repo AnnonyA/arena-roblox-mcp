@@ -3,8 +3,11 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 )
+
+var ErrNoConnector = errors.New("mcp connector is not configured")
 
 type ToolResult struct {
 	Content           json.RawMessage
@@ -95,6 +98,11 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 			case <-inFlight:
 				continue
 			}
+		}
+
+		if c.connect == nil {
+			c.mu.Unlock()
+			return nil, ErrNoConnector
 		}
 
 		inFlight := make(chan struct{})

@@ -40,7 +40,7 @@ The first version will not include:
 - A web UI.
 - Multi-agent orchestration.
 - Judge-model arbitration.
-- Automatic model routing based on task classification.
+- Custom automatic model routing based on task classification.
 - A generic multi-provider gateway beyond Arena.ai.
 - Full project snapshots or source-control replacement.
 - Auto-updating installers.
@@ -115,6 +115,8 @@ Responsibilities:
 - Shut down cleanly on exit and cancellation.
 - Avoid process leaks/zombie child processes.
 
+The implementation will use the official Tier 1 Go MCP SDK, `github.com/modelcontextprotocol/go-sdk/mcp`, as the protocol/client foundation. Project code should wrap the SDK behind our own small interfaces instead of hand-implementing MCP/JSON-RPC. A custom transport/protocol implementation is allowed only if a concrete SDK limitation is demonstrated during implementation and documented in the implementation plan or subsequent design amendment.
+
 The MCP package should remain generic enough that Roblox-specific behavior sits in a separate adapter layer.
 
 ### 5.3 Roblox Adapter
@@ -176,11 +178,13 @@ Responsibilities:
 - Produce human-readable diffs.
 - Avoid storing full-game snapshots.
 
-On Windows, session data should default under a user-local application directory such as:
+On Windows, session data should default under:
 
 ```text
 %LOCALAPPDATA%\arena-rbx\sessions\
 ```
+
+If `LOCALAPPDATA` is unavailable, the application may fall back to the standard per-user config/data location exposed by Go's OS facilities.
 
 Session journals must never contain the Arena API key.
 
@@ -234,7 +238,19 @@ The initial CLI command surface is:
 
 Any non-empty line that does not start with `/` is treated as an agent task.
 
-### 6.2 Cancellation
+### 6.2 Startup Model Selection
+
+v0.1 does not implement a custom intelligent router.
+
+Model selection rules:
+
+1. If `--model <id>` is provided, use it.
+2. Otherwise, if `arena.model` contains a concrete model ID, use it.
+3. Otherwise, fetch available models and prompt the user to choose before the first agent request.
+
+If Arena exposes a first-class automatic/router model as an ordinary model ID, the user may select that ID like any other model. Our own task-aware `/model auto` router is reserved for a later version.
+
+### 6.3 Cancellation
 
 `Ctrl+C` while a request is active should cancel the current Arena/tool operation and return to the prompt when safe.
 
@@ -256,7 +272,7 @@ Example shape:
 {
   "arena": {
     "apiKeyEnv": "ARENA_API_KEY",
-    "model": "auto",
+    "model": "",
     "fallbacks": [],
     "stream": true
   },
@@ -278,16 +294,18 @@ Example shape:
 }
 ```
 
-Configuration precedence:
+General configuration precedence:
 
 ```text
 CLI flags
-  > environment variables
+  > process environment variables
   > arena-rbx.json
   > internal defaults
 ```
 
-### 7.1 Credentials
+The API key is intentionally handled more narrowly; see the next section.
+
+### 7.1 Credentials and `.env`
 
 The repository will contain `.env.example`, never a real `.env`.
 
@@ -299,7 +317,19 @@ ARENA_API_KEY=put_your_arena_api_key_here
 
 `.env` must be ignored by Git.
 
-The program should also support ordinary environment-variable configuration, for example in PowerShell:
+For local convenience, v0.1 will automatically look for a `.env` file in the working directory at startup. It will use a minimal parser sufficient for `KEY=VALUE` entries and must not overwrite variables already present in the process environment.
+
+API-key resolution is therefore:
+
+```text
+existing process environment variable named by arena.apiKeyEnv
+  > same variable loaded from local .env
+  > missing-key error
+```
+
+v0.1 will not expose a `--api-key <secret>` flag because command-line secrets can leak through shell history or process inspection.
+
+The program must also support ordinary environment-variable configuration, for example in PowerShell:
 
 ```powershell
 $env:ARENA_API_KEY="..."
@@ -314,7 +344,7 @@ No command such as `/config`, `/status`, debug logging, HTTP error formatting, o
 
 The selected model can come from config, CLI flags, or `/model`.
 
-A future automatic router may use `/model auto`, but in v0.1 `auto` must not imply a complex custom model-ranking subsystem unless Arena itself provides a directly usable automatic route. If no usable automatic route is available during implementation, the CLI must require a concrete model selection rather than invent hidden routing logic.
+v0.1 does not invent hidden automatic routing logic. When no model is configured, the CLI asks the user to select from the dynamically discovered list before the first model request.
 
 ## 9. MCP Tool Discovery and Tool Filtering
 
@@ -406,7 +436,7 @@ playtests                 automatic
 high-risk operations      confirmation required
 ```
 
-A future or implementation-time flag such as `--allow-dangerous` may disable selected confirmations for advanced users, but must not be the default.
+v0.1 may expose `--allow-dangerous` as an explicit process-lifetime opt-out from selected high-risk confirmations. It must never be enabled by default or persisted silently between runs.
 
 ### 11.3 Undo Semantics
 
@@ -436,12 +466,10 @@ Only changed resources are journaled. The application does not maintain a giant 
 
 Errors should be concise, actionable, and non-secret-bearing.
 
-Examples:
-
 ### Arena key absent
 
 ```text
-Arena API key not configured. Set ARENA_API_KEY or configure arena.apiKeyEnv.
+Arena API key not configured. Set ARENA_API_KEY or add it to a local .env file.
 ```
 
 ### Arena authentication failure
@@ -611,6 +639,7 @@ Cover:
 - `/exit`
 - plain-text output without ANSI
 - configuration precedence
+- `.env` loading without overriding process environment
 - graceful Ctrl+C behavior where practical to test
 
 ### 15.5 Safety Tests
@@ -665,10 +694,11 @@ v0.1.0 is not considered complete until all of these are satisfied:
 - [ ] Builds as a standalone Windows executable.
 - [ ] Does not require Node.js or Python.
 - [ ] Arena API connectivity works.
+- [ ] Local `.env` loading works without overriding an existing process environment variable.
 - [ ] Arena model discovery is dynamic.
 - [ ] Model selection works.
 - [ ] Streaming output works.
-- [ ] Roblox MCP connection works.
+- [ ] Roblox MCP connection works through the official Go MCP SDK.
 - [ ] MCP tool discovery and caching work.
 - [ ] Multi-round tool calling works.
 - [ ] Script reading/searching works through Studio MCP.

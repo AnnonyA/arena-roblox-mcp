@@ -18,11 +18,12 @@ type Tool struct {
 type DiscoverFunc func(context.Context) ([]Tool, error)
 
 type Registry struct {
-	mu       sync.Mutex
-	discover DiscoverFunc
-	tools    []Tool
-	loaded   bool
-	inFlight chan struct{}
+	mu         sync.Mutex
+	discover   DiscoverFunc
+	tools      []Tool
+	loaded     bool
+	inFlight   chan struct{}
+	generation uint64
 }
 
 func NewRegistry(discover DiscoverFunc) *Registry { return &Registry{discover: discover} }
@@ -52,10 +53,11 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		}
 		inFlight := make(chan struct{})
 		r.inFlight = inFlight
+		generation := r.generation
 		r.mu.Unlock()
 		tools, err := r.discover(ctx)
 		r.mu.Lock()
-		if err == nil {
+		if err == nil && generation == r.generation {
 			r.tools = cloneTools(tools)
 			r.loaded = true
 		}
@@ -67,6 +69,14 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		}
 		return cloneTools(tools), nil
 	}
+}
+
+func (r *Registry) Invalidate() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.generation++
+	r.tools = nil
+	r.loaded = false
 }
 
 func cloneTools(tools []Tool) []Tool {

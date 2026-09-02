@@ -53,3 +53,30 @@ func TestListModelsErrorDoesNotLeakAPIKey(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 }
+
+func TestListModelsRetriesTransientFailures(t *testing.T) {
+	t.Parallel()
+	attempts := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"id":"model-a"}]}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(ClientOptions{BaseURL: srv.URL})
+	got, err := c.ListModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 3 {
+		t.Fatalf("attempts = %d, want 3", attempts)
+	}
+	if len(got) != 1 || got[0].ID != "model-a" {
+		t.Fatalf("models = %#v", got)
+	}
+}

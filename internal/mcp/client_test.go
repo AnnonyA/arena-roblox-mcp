@@ -3,8 +3,10 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"testing"
+	"time"
 )
 
 type fakeSession struct {
@@ -89,5 +91,51 @@ func TestClientCloseClosesSessionAndForcesReconnect(t *testing.T) {
 	}
 	if second.listCalls != 1 {
 		t.Fatalf("second session ListTools calls = %d, want 1", second.listCalls)
+	}
+}
+
+func TestClientWaiterCanCancelWhileConnectionIsInFlight(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	firstDone := make(chan error, 1)
+	session := &fakeSession{}
+
+	client := NewClient(func(context.Context) (Session, error) {
+		close(started)
+		<-release
+		return session, nil
+	})
+
+	go func() {
+		_, err := client.CallTool(context.Background(), "read_script", nil)
+		firstDone <- err
+	}()
+
+	<-started
+
+	ctx, cancel := context.WithCancel(context.Background())
+	secondDone := make(chan error, 1)
+	go func() {
+		_, err := client.CallTool(ctx, "read_script", nil)
+		secondDone <- err
+	}()
+	cancel()
+
+	select {
+	case err := <-secondDone:
+		if !errors.Is(err, context.Canceled) {
+			close(release)
+			<-firstDone
+			t.Fatalf("second CallTool error = %v, want context.Canceled", err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		close(release)
+		<-firstDone
+		t.Fatal("second CallTool ignored cancellation while connection was in progress")
+	}
+
+	close(release)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first CallTool: %v", err)
 	}
 }

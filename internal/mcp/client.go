@@ -7,7 +7,10 @@ import (
 	"sync"
 )
 
-var ErrNoConnector = errors.New("mcp connector is not configured")
+var (
+	ErrNoConnector = errors.New("mcp connector is not configured")
+	ErrNilSession   = errors.New("mcp connector returned a nil session")
+)
 
 type ToolResult struct {
 	Content           json.RawMessage
@@ -110,6 +113,9 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 		c.mu.Unlock()
 
 		session, err := c.connect(ctx)
+		if err == nil && session == nil {
+			err = ErrNilSession
+		}
 
 		c.mu.Lock()
 		if err == nil {

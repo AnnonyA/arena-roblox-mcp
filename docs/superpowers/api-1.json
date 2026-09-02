@@ -1,0 +1,2040 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Arena API",
+    "version": "1.0.0",
+    "description": "The Arena API is an OpenAI-compatible LLM gateway that provides unified access to models from multiple providers.\n\n## Quickstart\n\n1. **Sign up** at [arena.ai](https://arena.ai) and open the Arena API dashboard.\n2. **Create a virtual API key** on the [Keys page](https://portal.api.preview.arena.ai/dashboard/keys).\n3. **List available models**:\n   ```bash\n   curl https://api.preview.arena.ai/v1/models \\\n     -H \"Authorization: Bearer $ARENA_KEY\"\n   ```\n4. **Make your first completion**:\n   ```bash\n   curl https://api.preview.arena.ai/v1/chat/completions \\\n     -H \"Content-Type: application/json\" \\\n     -H \"Authorization: Bearer $ARENA_KEY\" \\\n     -d '{\"model\": \"claude-sonnet-4-6\", \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]}'\n   ```\n5. **Use Claude Code** by pointing Anthropic-compatible clients at the Arena API root URL:\n   ```bash\n   export ANTHROPIC_BASE_URL=https://api.preview.arena.ai\n   export ANTHROPIC_AUTH_TOKEN=$ARENA_KEY\n   export ANTHROPIC_MODEL=claude-sonnet-4-6\n   export ANTHROPIC_DEFAULT_SONNET_MODEL=claude-sonnet-4-6\n   export ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5-20251001\n   export ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-4-6\n   claude --model \"$ANTHROPIC_MODEL\"\n   ```\n## Authentication\n\nAuthenticate requests with a virtual API key in the `Authorization` header:\n\n```\nAuthorization: Bearer <your-arena-key>\n```\n\n`/anthropic/v1/messages` is a compatibility alias for `/v1/messages`; new Anthropic SDK and Claude Code integrations should use the Arena API root URL with `/v1/messages`.\n\nAnthropic-compatible `/v1/messages` requests may authenticate with either header:\n\n```\nx-api-key: <your-arena-key>\nAuthorization: Bearer <your-arena-key>\n```\n\n## Model Fallback\n\nWhen a model fails with a provider-side error (429, 5xx, or a transport failure), the gateway can try backup models before giving up.\n\n- Pass an ordered `fallbacks` array alongside `model` to name backups.\n- Narrow the trigger statuses with `fallback_on` (a subset of 429/500/502/503/504).\n- Every field has an `X-Arena-*` header equivalent (`X-Arena-Fallbacks`, `X-Arena-Fallback-On`, `X-Arena-Allow-Fallbacks`) for clients that can only set headers.\n- Responses carry `X-Arena-Fallback-Index` / `X-Arena-Fallback-Reason` when a fallback fired; if every model fails, the error body includes an `arena_fallback_attempts` list.\n\n```bash\ncurl https://api.preview.arena.ai/v1/chat/completions \\\n  -H \"Authorization: Bearer $ARENA_KEY\" \\\n  -d '{\"model\": \"claude-opus-4-6\", \"fallbacks\": [\"gpt-5.5\", \"claude-sonnet-4-6\"], \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]}'\n```",
+    "contact": {
+      "name": "Arena",
+      "url": "https://arena.ai"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.preview.arena.ai",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:9200",
+      "description": "Local development"
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "Arena API",
+      "description": "OpenAI-compatible LLM gateway with multi-provider model access."
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ArenaKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Virtual API key issued from the Arena API dashboard. Pass as a Bearer token: `Authorization: Bearer <your-arena-key>`."
+      },
+      "AnthropicAPIKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Virtual API key issued from the Arena API dashboard. Use this Anthropic-compatible header on `/v1/messages`, including Claude Code requests."
+      }
+    },
+    "schemas": {
+      "ChatCompletionMessage": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "assistant",
+              "user",
+              "system"
+            ],
+            "example": "assistant"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true,
+            "example": "Hello!"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "ChatCompletionChoice": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "example": 0
+          },
+          "message": {
+            "$ref": "#/components/schemas/ChatCompletionMessage"
+          },
+          "finish_reason": {
+            "type": "string",
+            "nullable": true,
+            "example": "stop"
+          }
+        },
+        "required": [
+          "index",
+          "message",
+          "finish_reason"
+        ]
+      },
+      "ChatCompletionUsage": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "example": 28
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "example": 42
+          },
+          "total_tokens": {
+            "type": "integer",
+            "example": 70
+          }
+        },
+        "required": [
+          "prompt_tokens",
+          "completion_tokens",
+          "total_tokens"
+        ]
+      },
+      "ChatCompletionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "chatcmpl-abc123"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "chat.completion"
+            ]
+          },
+          "created": {
+            "type": "integer",
+            "example": 1740000000
+          },
+          "model": {
+            "type": "string",
+            "description": "The actual model that handled the request.",
+            "example": "claude-opus-4-6"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatCompletionChoice"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ChatCompletionUsage"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "choices",
+          "usage"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Resource not found"
+          },
+          "field": {
+            "type": "string",
+            "example": "name"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ChatTextContentPart": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text"
+            ],
+            "example": "text"
+          },
+          "text": {
+            "type": "string",
+            "example": "Hello! What can you do?"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ]
+      },
+      "ChatMessageContent": {
+        "anyOf": [
+          {
+            "type": "string",
+            "example": "Hello! What can you do?"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatTextContentPart"
+            },
+            "minItems": 1
+          }
+        ]
+      },
+      "ChatMessage": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ],
+            "example": "user"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ChatMessageContent"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      },
+      "ChatCompletionRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model to use. Pass a model name (e.g. `claude-sonnet-4-6`) for direct access.",
+            "example": "claude-sonnet-4-6"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "minItems": 1,
+            "description": "Conversation messages in OpenAI chat format."
+          },
+          "max_completion_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "Maximum number of tokens to generate. This field takes precedence over `max_tokens` when both are supplied.",
+            "example": 1024
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "description": "Deprecated legacy alias for `max_completion_tokens`. Use `max_completion_tokens` for new integrations.",
+            "example": 1024,
+            "deprecated": true
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2,
+            "example": 0.7
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "If true, the response streams as server-sent events (SSE) in the `text/event-stream` format.",
+            "example": false
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            },
+            "description": "List of tools (functions) the model can call."
+          },
+          "fallbacks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "description": "Ordered list of backup models to try when the primary model fails with a provider-side error (429, 5xx, or a transport failure). The gateway tries them in order after the primary model's own retries are exhausted, and bills only the model that succeeds. Capped at 3 entries. May also be sent as the `X-Arena-Fallbacks` header (comma-separated) for clients that cannot set request-body fields.",
+            "example": [
+              "gpt-5-mini",
+              "gemini-3.5-flash"
+            ]
+          },
+          "fallback_on": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "enum": [
+                429,
+                500,
+                502,
+                503,
+                504
+              ]
+            },
+            "description": "Optional subset of the default trigger statuses (429, 500, 502, 503, 504) that should trigger a fallback. May only narrow the default set, never widen it. Header equivalent: `X-Arena-Fallback-On`.",
+            "example": [
+              429,
+              503
+            ]
+          },
+          "allow_fallbacks": {
+            "type": "boolean",
+            "description": "Set to false to opt a routing-mode request out of automatic fallback. Header equivalent: `X-Arena-Allow-Fallbacks`.",
+            "example": false
+          }
+        },
+        "required": [
+          "model",
+          "messages"
+        ]
+      },
+      "ResponsesOutputContentPart": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "output_text"
+          },
+          "text": {
+            "type": "string",
+            "example": "Hello!"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "ResponsesOutputItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "msg_abc123"
+          },
+          "type": {
+            "type": "string",
+            "example": "message"
+          },
+          "status": {
+            "type": "string",
+            "example": "completed"
+          },
+          "role": {
+            "type": "string",
+            "example": "assistant"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsesOutputContentPart"
+            }
+          },
+          "name": {
+            "type": "string",
+            "example": "lookup"
+          },
+          "arguments": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "ResponsesInputTokenDetails": {
+        "type": "object",
+        "properties": {
+          "cached_tokens": {
+            "type": "integer",
+            "example": 128
+          },
+          "audio_tokens": {
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "ResponsesOutputTokenDetails": {
+        "type": "object",
+        "properties": {
+          "reasoning_tokens": {
+            "type": "integer",
+            "example": 32
+          },
+          "audio_tokens": {
+            "type": "integer",
+            "example": 0
+          }
+        }
+      },
+      "ResponsesUsage": {
+        "type": "object",
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "example": 28
+          },
+          "output_tokens": {
+            "type": "integer",
+            "example": 42
+          },
+          "total_tokens": {
+            "type": "integer",
+            "example": 70
+          },
+          "input_tokens_details": {
+            "$ref": "#/components/schemas/ResponsesInputTokenDetails"
+          },
+          "output_tokens_details": {
+            "$ref": "#/components/schemas/ResponsesOutputTokenDetails"
+          }
+        },
+        "required": [
+          "input_tokens",
+          "output_tokens",
+          "total_tokens"
+        ]
+      },
+      "ResponsesResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "resp_abc123"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "response"
+            ],
+            "example": "response"
+          },
+          "created_at": {
+            "type": "number",
+            "example": 1740000000
+          },
+          "model": {
+            "type": "string",
+            "description": "The actual OpenAI-backed model that handled the request. Routing may differ from the requested model.",
+            "example": "gpt-5.5"
+          },
+          "status": {
+            "type": "string",
+            "example": "completed"
+          },
+          "output": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsesOutputItem"
+            }
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ResponsesUsage"
+          }
+        },
+        "required": [
+          "id",
+          "model",
+          "status",
+          "output"
+        ]
+      },
+      "ResponsesInputContentPart": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "input_text"
+          },
+          "text": {
+            "type": "string",
+            "example": "Hello!"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "ResponsesInputItem": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant",
+              "system"
+            ],
+            "example": "user"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "example": "Hello!"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ResponsesInputContentPart"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "ResponsesInput": {
+        "anyOf": [
+          {
+            "type": "string",
+            "example": "Say hello in exactly five words."
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsesInputItem"
+            },
+            "minItems": 1
+          }
+        ],
+        "description": "Input text or Responses input items. The gateway preserves Responses-specific fields when proxying."
+      },
+      "ResponsesRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model to use. Responses requests are resolved to OpenAI-backed models only.",
+            "example": "gpt-5.5"
+          },
+          "input": {
+            "$ref": "#/components/schemas/ResponsesInput"
+          },
+          "instructions": {
+            "type": "string",
+            "example": "You are a concise coding assistant."
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "If true, the response streams as Responses API server-sent events with `event:` and `data:` lines.",
+            "example": false
+          },
+          "previous_response_id": {
+            "type": "string",
+            "example": "resp_abc123"
+          },
+          "prompt_cache_key": {
+            "type": "string",
+            "example": "codex-session-123"
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 1024
+          },
+          "reasoning": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "example": {
+              "effort": "medium"
+            }
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            },
+            "description": "List of Responses API tools the model can call."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "example": {
+              "client": "codex"
+            }
+          }
+        },
+        "required": [
+          "model",
+          "input"
+        ]
+      },
+      "ResponsesCompactionResponse": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "response.compaction"
+            ],
+            "example": "response.compaction"
+          },
+          "output": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsesOutputItem"
+            },
+            "description": "Compaction output items. OpenAI returns opaque `type: \"compaction\"` items that clients pass into later Responses calls."
+          },
+          "usage": {
+            "$ref": "#/components/schemas/ResponsesUsage"
+          }
+        },
+        "required": [
+          "output"
+        ]
+      },
+      "ResponsesCompactRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Model to use for Responses compaction. Compact requests are resolved to OpenAI-backed models only.",
+            "example": "gpt-5.5"
+          },
+          "input": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResponsesInput"
+              },
+              {
+                "description": "Input text or Responses input items to compact. May be omitted when `previous_response_id` is provided."
+              }
+            ]
+          },
+          "instructions": {
+            "type": "string",
+            "example": "Preserve implementation decisions and current task state."
+          },
+          "previous_response_id": {
+            "type": "string",
+            "example": "resp_abc123"
+          },
+          "reasoning": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "example": {
+              "effort": "medium"
+            }
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            },
+            "description": "List of Responses API tools available to the compaction request."
+          },
+          "parallel_tool_calls": {
+            "type": "boolean",
+            "example": true
+          },
+          "text": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "example": {
+              "format": {
+                "type": "text"
+              }
+            }
+          }
+        },
+        "required": [
+          "model"
+        ]
+      },
+      "AnthropicTextContentBlock": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text"
+            ],
+            "example": "text"
+          },
+          "text": {
+            "type": "string",
+            "example": "Hello!"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ]
+      },
+      "AnthropicMessagesUsage": {
+        "type": "object",
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "example": 28
+          },
+          "output_tokens": {
+            "type": "integer",
+            "example": 42
+          },
+          "cache_creation_input_tokens": {
+            "type": "integer",
+            "example": 0
+          },
+          "cache_read_input_tokens": {
+            "type": "integer",
+            "example": 128
+          }
+        },
+        "required": [
+          "input_tokens",
+          "output_tokens"
+        ]
+      },
+      "AnthropicMessagesResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "msg_abc123"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "message"
+            ],
+            "example": "message"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "assistant"
+            ],
+            "example": "assistant"
+          },
+          "model": {
+            "type": "string",
+            "example": "claude-sonnet-4-6"
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnthropicTextContentBlock"
+            }
+          },
+          "stop_reason": {
+            "type": "string",
+            "nullable": true,
+            "example": "end_turn"
+          },
+          "stop_sequence": {
+            "type": "string",
+            "nullable": true
+          },
+          "usage": {
+            "$ref": "#/components/schemas/AnthropicMessagesUsage"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "role",
+          "model",
+          "content",
+          "stop_reason",
+          "usage"
+        ]
+      },
+      "AnthropicMessageContent": {
+        "anyOf": [
+          {
+            "type": "string",
+            "example": "Hello!"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnthropicTextContentBlock"
+            },
+            "minItems": 1
+          }
+        ]
+      },
+      "AnthropicMessage": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "example": "user"
+          },
+          "content": {
+            "$ref": "#/components/schemas/AnthropicMessageContent"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      },
+      "AnthropicMessagesRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "Claude model ID. Arena API accepts bare Claude model names on this Anthropic-compatible route.",
+            "example": "claude-sonnet-4-6"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "example": 1024
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnthropicMessage"
+            },
+            "minItems": 1,
+            "description": "Conversation messages in Anthropic Messages format."
+          },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AnthropicTextContentBlock"
+                },
+                "minItems": 1
+              }
+            ],
+            "example": "You are a concise assistant."
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "example": 0.7
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "If true, the response streams as Anthropic server-sent events.",
+            "example": false
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            },
+            "description": "List of Anthropic tool definitions the model can call."
+          }
+        },
+        "required": [
+          "model",
+          "max_tokens",
+          "messages"
+        ]
+      },
+      "RoutingModeEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "routing-example"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "model"
+            ]
+          },
+          "created": {
+            "type": "integer",
+            "example": 1740000000
+          },
+          "owned_by": {
+            "type": "string",
+            "enum": [
+              "arena"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "example": "Example Routing Mode"
+          },
+          "description": {
+            "type": "string",
+            "example": "Arena routing mode (when available)."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "routing"
+            ]
+          },
+          "supported_models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "claude-opus-4-6",
+              "gpt-5.5"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "created",
+          "owned_by",
+          "name",
+          "description",
+          "type",
+          "supported_models"
+        ]
+      },
+      "ModelPricing": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "example": "0.000005"
+          },
+          "completion": {
+            "type": "string",
+            "example": "0.000025"
+          },
+          "unit": {
+            "type": "string",
+            "example": "token"
+          },
+          "image_input": {
+            "type": "string",
+            "example": "0.000008"
+          },
+          "cache_read": {
+            "type": "string",
+            "description": "Cost per token for cached prompt/input reads",
+            "example": "0.0000005"
+          },
+          "cache_write": {
+            "type": "string",
+            "description": "Cost per token for cached prompt/input writes",
+            "example": "0.00000625"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "example": "1024 square medium"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "$0.034"
+                }
+              },
+              "required": [
+                "label",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "prompt",
+          "completion",
+          "unit"
+        ]
+      },
+      "ModelArchitecture": {
+        "type": "object",
+        "properties": {
+          "modality": {
+            "type": "string",
+            "example": "text+image->text"
+          },
+          "input_modalities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "text",
+              "image"
+            ]
+          },
+          "output_modalities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "text"
+            ]
+          },
+          "tokenizer": {
+            "type": "string",
+            "example": "Claude"
+          }
+        },
+        "required": [
+          "modality",
+          "input_modalities",
+          "output_modalities",
+          "tokenizer"
+        ]
+      },
+      "ModelTopProvider": {
+        "type": "object",
+        "properties": {
+          "max_completion_tokens": {
+            "type": "integer",
+            "example": 32000
+          },
+          "is_moderated": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "max_completion_tokens",
+          "is_moderated"
+        ]
+      },
+      "ModelLatency": {
+        "type": "object",
+        "properties": {
+          "ttft_ms": {
+            "type": "number",
+            "description": "Time to first token in milliseconds",
+            "example": 2100
+          },
+          "ttcs_ms": {
+            "type": "number",
+            "description": "Time to complete stream in milliseconds",
+            "example": 29000
+          }
+        },
+        "required": [
+          "ttft_ms",
+          "ttcs_ms"
+        ]
+      },
+      "DirectModelEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "claude-opus-4-6"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "model"
+            ]
+          },
+          "created": {
+            "type": "integer",
+            "example": 1739836800
+          },
+          "owned_by": {
+            "type": "string",
+            "example": "anthropic"
+          },
+          "name": {
+            "type": "string",
+            "example": "Claude Opus 4.6"
+          },
+          "description": {
+            "type": "string",
+            "example": "Anthropic's most capable model."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "model"
+            ]
+          },
+          "endpoint": {
+            "type": "string",
+            "enum": [
+              "chat"
+            ],
+            "example": "chat"
+          },
+          "context_length": {
+            "type": "integer",
+            "example": 200000
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/ModelPricing"
+          },
+          "architecture": {
+            "$ref": "#/components/schemas/ModelArchitecture"
+          },
+          "top_provider": {
+            "$ref": "#/components/schemas/ModelTopProvider"
+          },
+          "supported_parameters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "max_tokens",
+              "temperature",
+              "stream"
+            ]
+          },
+          "latency": {
+            "$ref": "#/components/schemas/ModelLatency"
+          },
+          "deprecated": {
+            "type": "boolean",
+            "example": false
+          },
+          "sunset_date": {
+            "type": "string",
+            "example": "2025-06-01"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "created",
+          "owned_by",
+          "name",
+          "description",
+          "type",
+          "pricing",
+          "architecture",
+          "top_provider",
+          "supported_parameters",
+          "latency"
+        ]
+      },
+      "ModelEntry": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/RoutingModeEntry"
+          },
+          {
+            "$ref": "#/components/schemas/DirectModelEntry"
+          }
+        ]
+      },
+      "ModelsListResponse": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelEntry"
+            }
+          }
+        },
+        "required": [
+          "object",
+          "data"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "Create a chat completion",
+        "description": "OpenAI-compatible chat completions endpoint provided by the **Arena API**.\n\nPass a model name (e.g. `claude-sonnet-4-6`) to send the request to that model.\n\nStreaming is supported — set `stream: true` to receive server-sent events.\n\nPass an optional `fallbacks` array of backup models to try when the primary model fails with a provider-side error (429, 5xx, transport). See `X-Arena-Fallback-Index` / `X-Arena-Fallback-Reason` in the response.",
+        "tags": [
+          "Arena API"
+        ],
+        "security": [
+          {
+            "ArenaKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat completion response. When `stream: true`, the response is `text/event-stream` with `data: {...}` chunks terminated by `data: [DONE]`.",
+            "headers": {
+              "X-Arena-Fallback-Index": {
+                "description": "1-based position of the fallback model that served the response (1 = first fallback, 2 = second, …). Present only when a fallback served the request; absent when the primary model served it.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Arena-Fallback-Reason": {
+                "description": "The upstream status (or \"transport_error\") that knocked out the model tried just before the one that served. Present only when a fallback fired.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient credits — account balance is exhausted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds the 10 MB limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Arena-Rate-Limit-Dimension": {
+                "description": "Rate-limit dimension that was exceeded.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "rpm",
+                    "rps",
+                    "tpm",
+                    "tps",
+                    "global_rpm",
+                    "global_rps",
+                    "org_inflight",
+                    "account_inflight"
+                  ]
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "Configured limit for the exceeded rate-limit dimension.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Remaining requests or tokens left in the current window after this rejection.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error or upstream provider failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream provider unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Billing service temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/responses": {
+      "post": {
+        "summary": "Create a Responses API response",
+        "description": "OpenAI-compatible Responses API endpoint provided by the **Arena Gateway**.\n\nThis route is intended for OpenAI SDK clients and tools such as Codex that use `/v1/responses`. The gateway preserves Responses-specific fields such as `previous_response_id`, `prompt_cache_key`, `reasoning`, and tool payloads while routing, billing, logging, and rate-limiting the request. Routing aliases are allowed but are constrained to OpenAI-backed models on this endpoint.\n\nStreaming is supported — set `stream: true` to receive Responses API server-sent events.",
+        "tags": [
+          "Arena Gateway"
+        ],
+        "security": [
+          {
+            "ArenaKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponsesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responses API response. When `stream: true`, the response is `text/event-stream` with Responses event chunks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsesResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Responses server-sent event stream with `event:` and `data:` lines."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient credits — account balance is exhausted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds the configured limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Arena-Rate-Limit-Dimension": {
+                "description": "Rate-limit dimension that was exceeded.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "rpm",
+                    "rps",
+                    "tpm",
+                    "tps",
+                    "global_rpm",
+                    "global_rps",
+                    "org_inflight",
+                    "account_inflight"
+                  ]
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "Configured limit for the exceeded rate-limit dimension.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Remaining requests or tokens left in the current window after this rejection.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error or upstream provider failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream provider unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Billing service temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/responses/compact": {
+      "post": {
+        "summary": "Create a Responses API compaction",
+        "description": "OpenAI-compatible Responses compaction endpoint provided by the **Arena Gateway**.\n\nThis route supports Codex and other Responses API clients that call `/v1/responses/compact` to produce opaque compaction items for later Responses calls. The gateway proxies compact requests directly to OpenAI, preserves forward-compatible request fields and Codex tracing headers, bills token usage, and constrains routing aliases to OpenAI-backed models.",
+        "tags": [
+          "Arena Gateway"
+        ],
+        "security": [
+          {
+            "ArenaKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponsesCompactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responses compaction result containing opaque compaction output items.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsesCompactionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient credits — account balance is exhausted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds the configured limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Arena-Rate-Limit-Dimension": {
+                "description": "Rate-limit dimension that was exceeded.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "rpm",
+                    "rps",
+                    "tpm",
+                    "tps",
+                    "global_rpm",
+                    "global_rps",
+                    "org_inflight",
+                    "account_inflight"
+                  ]
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "Configured limit for the exceeded rate-limit dimension.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Remaining requests or tokens left in the current window after this rejection.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error or upstream provider failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream provider unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Billing service temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/messages": {
+      "post": {
+        "summary": "Create an Anthropic message",
+        "description": "Anthropic Messages-compatible endpoint provided by the **Arena API**.\n\nThis route is intended for Claude Code and Anthropic SDK clients. Set the client base URL to the Arena API root URL and pass your Arena API key as the Anthropic API key. The gateway accepts `x-api-key: <your-arena-key>` on this route and forwards the request to Claude through the gateway billing, logging, and rate-limit pipeline.\n\nStreaming is supported — set `stream: true` to receive Anthropic server-sent events.",
+        "tags": [
+          "Arena API"
+        ],
+        "security": [
+          {
+            "AnthropicAPIKeyAuth": []
+          },
+          {
+            "ArenaKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnthropicMessagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Anthropic Messages response. When `stream: true`, the response is `text/event-stream` with Anthropic event chunks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnthropicMessagesResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Anthropic server-sent event stream with `event:` and `data:` lines."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient credits — account balance is exhausted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds the configured limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Arena-Rate-Limit-Dimension": {
+                "description": "Rate-limit dimension that was exceeded.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "rpm",
+                    "rps",
+                    "tpm",
+                    "tps",
+                    "global_rpm",
+                    "global_rps",
+                    "org_inflight",
+                    "account_inflight"
+                  ]
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "Configured limit for the exceeded rate-limit dimension.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Remaining requests or tokens left in the current window after this rejection.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error or upstream provider failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream provider unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Billing service temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/anthropic/v1/messages": {
+      "post": {
+        "summary": "Create an Anthropic message (compatibility alias)",
+        "description": "Compatibility alias for `/v1/messages` that supports Anthropic Messages integrations. Behaves identically to `/v1/messages`: same authentication, same request and response schemas, same billing and logging pipeline.\n\nNew integrations should prefer `/v1/messages` so Anthropic SDK clients can use the Arena API root URL as `ANTHROPIC_BASE_URL` without path tricks.",
+        "tags": [
+          "Arena API"
+        ],
+        "security": [
+          {
+            "AnthropicAPIKeyAuth": []
+          },
+          {
+            "ArenaKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnthropicMessagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Anthropic Messages response. When `stream: true`, the response is `text/event-stream` with Anthropic event chunks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnthropicMessagesResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Anthropic server-sent event stream with `event:` and `data:` lines."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Insufficient credits — account balance is exhausted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds the configured limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Arena-Rate-Limit-Dimension": {
+                "description": "Rate-limit dimension that was exceeded.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "rpm",
+                    "rps",
+                    "tpm",
+                    "tps",
+                    "global_rpm",
+                    "global_rps",
+                    "org_inflight",
+                    "account_inflight"
+                  ]
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "Configured limit for the exceeded rate-limit dimension.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "Remaining requests or tokens left in the current window after this rejection.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error or upstream provider failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream provider unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Billing service temporarily unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "List available models",
+        "description": "Returns the list of models available through the Arena API.\n\nModel entries have `type: \"model\"` with pricing, latency, and architecture details.",
+        "tags": [
+          "Arena API"
+        ],
+        "security": [
+          {
+            "ArenaKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of available models",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/liveliness": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns `200 OK` when the Arena API is running. No authentication required.",
+        "tags": [
+          "Arena API"
+        ],
+        "responses": {
+          "200": {
+            "description": "Gateway is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "healthy"
+                      ],
+                      "example": "healthy"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

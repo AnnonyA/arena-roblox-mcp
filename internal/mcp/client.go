@@ -24,6 +24,7 @@ type Client struct {
 	mu       sync.Mutex
 	connect  ConnectFunc
 	session  Session
+	inFlight chan struct{}
 	registry *Registry
 }
 
@@ -46,16 +47,25 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMe
 }
 
 func (c *Client) Close() error {
-	c.mu.Lock()
-	session := c.session
-	c.session = nil
-	c.registry.Invalidate()
-	c.mu.Unlock()
+	for {
+		c.mu.Lock()
+		if c.inFlight != nil {
+			inFlight := c.inFlight
+			c.mu.Unlock()
+			<-inFlight
+			continue
+		}
 
-	if session == nil {
-		return nil
+		session := c.session
+		c.session = nil
+		c.registry.Invalidate()
+		c.mu.Unlock()
+
+		if session == nil {
+			return nil
+		}
+		return session.Close()
 	}
-	return session.Close()
 }
 
 func (c *Client) listTools(ctx context.Context) ([]Tool, error) {
@@ -67,17 +77,43 @@ func (c *Client) listTools(ctx context.Context) ([]Tool, error) {
 }
 
 func (c *Client) ensureSession(ctx context.Context) (Session, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	for {
+		c.mu.Lock()
+		if c.session != nil {
+			session := c.session
+			c.mu.Unlock()
+			return session, nil
+		}
 
-	if c.session != nil {
-		return c.session, nil
-	}
+		if c.inFlight != nil {
+			inFlight := c.inFlight
+			c.mu.Unlock()
 
-	session, err := c.connect(ctx)
-	if err != nil {
-		return nil, err
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-inFlight:
+				continue
+			}
+		}
+
+		inFlight := make(chan struct{})
+		c.inFlight = inFlight
+		c.mu.Unlock()
+
+		session, err := c.connect(ctx)
+
+		c.mu.Lock()
+		if err == nil {
+			c.session = session
+		}
+		c.inFlight = nil
+		close(inFlight)
+		c.mu.Unlock()
+
+		if err != nil {
+			return nil, err
+		}
+		return session, nil
 	}
-	c.session = session
-	return session, nil
 }

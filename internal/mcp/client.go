@@ -9,7 +9,7 @@ import (
 
 var (
 	ErrNoConnector = errors.New("mcp connector is not configured")
-	ErrNilSession   = errors.New("mcp connector returned a nil session")
+	ErrNilSession  = errors.New("mcp connector returned a nil session")
 )
 
 type ToolResult struct {
@@ -101,6 +101,11 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 			case <-inFlight:
 				continue
 			}
+		}
+
+		if err := ctx.Err(); err != nil {
+			c.mu.Unlock()
+			return nil, err
 		}
 
 		if c.connect == nil {

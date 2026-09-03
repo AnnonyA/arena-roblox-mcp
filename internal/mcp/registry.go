@@ -35,6 +35,9 @@ func NewRegistry(discover DiscoverFunc) *Registry { return &Registry{discover: d
 
 func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		r.mu.Lock()
 		if r.loaded {
 			tools := cloneTools(r.tools)

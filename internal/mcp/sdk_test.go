@@ -1,6 +1,9 @@
 package mcp
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestNewCommandClientRejectsMissingCommand(t *testing.T) {
 	client, err := NewCommandClient(CommandConfig{})
@@ -9,5 +12,22 @@ func TestNewCommandClientRejectsMissingCommand(t *testing.T) {
 	}
 	if client != nil {
 		t.Fatal("NewCommandClient returned a client for an empty command")
+	}
+}
+
+func TestValidateToolPageCursorRejectsRepeatedCursor(t *testing.T) {
+	seen := map[string]struct{}{}
+	if err := validateToolPageCursor(1, seen, "next"); err != nil {
+		t.Fatalf("first cursor rejected: %v", err)
+	}
+	if err := validateToolPageCursor(2, seen, "next"); !errors.Is(err, ErrToolPaginationCycle) {
+		t.Fatalf("repeated cursor error = %v, want %v", err, ErrToolPaginationCycle)
+	}
+}
+
+func TestValidateToolPageCursorRejectsExcessivePagination(t *testing.T) {
+	seen := map[string]struct{}{}
+	if err := validateToolPageCursor(maxToolListPages+1, seen, "still-more"); !errors.Is(err, ErrToolPaginationLimit) {
+		t.Fatalf("pagination limit error = %v, want %v", err, ErrToolPaginationLimit)
 	}
 }

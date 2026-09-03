@@ -53,13 +53,27 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMe
 }
 
 func (c *Client) Close() error {
+	return c.CloseContext(context.Background())
+}
+
+func (c *Client) CloseContext(ctx context.Context) error {
 	for {
 		c.mu.Lock()
 		if c.inFlight != nil {
 			inFlight := c.inFlight
 			c.mu.Unlock()
-			<-inFlight
-			continue
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-inFlight:
+				continue
+			}
+		}
+
+		if err := ctx.Err(); err != nil {
+			c.mu.Unlock()
+			return err
 		}
 
 		session := c.session

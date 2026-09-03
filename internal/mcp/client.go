@@ -26,11 +26,16 @@ type Session interface {
 
 type ConnectFunc func(context.Context) (Session, error)
 
+type connectAttempt struct {
+	done chan struct{}
+	err  error
+}
+
 type Client struct {
 	mu       sync.Mutex
 	connect  ConnectFunc
 	session  Session
-	inFlight chan struct{}
+	inFlight *connectAttempt
 	registry *Registry
 }
 
@@ -40,9 +45,7 @@ func NewClient(connect ConnectFunc) *Client {
 	return client
 }
 
-func (c *Client) Tools(ctx context.Context) ([]Tool, error) {
-	return c.registry.Tools(ctx)
-}
+func (c *Client) Tools(ctx context.Context) ([]Tool, error) { return c.registry.Tools(ctx) }
 
 func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMessage) (ToolResult, error) {
 	session, err := c.ensureSession(ctx)
@@ -52,35 +55,29 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMe
 	return session.CallTool(ctx, name, arguments)
 }
 
-func (c *Client) Close() error {
-	return c.CloseContext(context.Background())
-}
+func (c *Client) Close() error { return c.CloseContext(context.Background()) }
 
 func (c *Client) CloseContext(ctx context.Context) error {
 	for {
 		c.mu.Lock()
 		if c.inFlight != nil {
-			inFlight := c.inFlight
+			attempt := c.inFlight
 			c.mu.Unlock()
-
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
-			case <-inFlight:
+			case <-attempt.done:
 				continue
 			}
 		}
-
 		if err := ctx.Err(); err != nil {
 			c.mu.Unlock()
 			return err
 		}
-
 		session := c.session
 		c.session = nil
 		c.registry.Invalidate()
 		c.mu.Unlock()
-
 		if session == nil {
 			return nil
 		}
@@ -104,31 +101,29 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 			c.mu.Unlock()
 			return session, nil
 		}
-
 		if c.inFlight != nil {
-			inFlight := c.inFlight
+			attempt := c.inFlight
 			c.mu.Unlock()
-
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-inFlight:
+			case <-attempt.done:
+				if attempt.err != nil {
+					return nil, attempt.err
+				}
 				continue
 			}
 		}
-
 		if err := ctx.Err(); err != nil {
 			c.mu.Unlock()
 			return nil, err
 		}
-
 		if c.connect == nil {
 			c.mu.Unlock()
 			return nil, ErrNoConnector
 		}
-
-		inFlight := make(chan struct{})
-		c.inFlight = inFlight
+		attempt := &connectAttempt{done: make(chan struct{})}
+		c.inFlight = attempt
 		c.mu.Unlock()
 
 		session, err := c.connect(ctx)
@@ -143,15 +138,14 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 				err = ErrNilSession
 			}
 		}
-
 		c.mu.Lock()
 		if err == nil {
 			c.session = session
 		}
+		attempt.err = err
 		c.inFlight = nil
-		close(inFlight)
+		close(attempt.done)
 		c.mu.Unlock()
-
 		if err != nil {
 			return nil, err
 		}

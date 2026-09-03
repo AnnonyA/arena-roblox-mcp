@@ -58,7 +58,14 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMe
 	if err != nil {
 		return ToolResult{}, err
 	}
-	return session.CallTool(ctx, name, arguments)
+	result, err := session.CallTool(ctx, name, arguments)
+	if err != nil {
+		return ToolResult{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return ToolResult{}, err
+	}
+	return result, nil
 }
 
 func (c *Client) Close() error { return c.CloseContext(context.Background()) }

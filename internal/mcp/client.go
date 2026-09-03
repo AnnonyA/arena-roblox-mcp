@@ -75,12 +75,12 @@ func (c *Client) CloseContext(ctx context.Context) error {
 		c.mu.Lock()
 		c.closed = true
 		if c.inFlight != nil {
+			attempt := c.inFlight
+			attempt.cancel()
 			if err := ctx.Err(); err != nil {
 				c.mu.Unlock()
 				return err
 			}
-			attempt := c.inFlight
-			attempt.cancel()
 			c.mu.Unlock()
 			select {
 			case <-ctx.Done():

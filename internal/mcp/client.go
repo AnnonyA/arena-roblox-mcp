@@ -118,8 +118,16 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 		c.mu.Unlock()
 
 		session, err := c.connect(ctx)
-		if err == nil && session == nil {
-			err = ErrNilSession
+		if err == nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				if session != nil {
+					_ = session.Close()
+				}
+				session = nil
+				err = ctxErr
+			} else if session == nil {
+				err = ErrNilSession
+			}
 		}
 
 		c.mu.Lock()

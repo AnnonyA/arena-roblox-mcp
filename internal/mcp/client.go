@@ -27,8 +27,9 @@ type Session interface {
 type ConnectFunc func(context.Context) (Session, error)
 
 type connectAttempt struct {
-	done chan struct{}
-	err  error
+	done   chan struct{}
+	cancel context.CancelFunc
+	err    error
 }
 
 type Client struct {
@@ -60,8 +61,13 @@ func (c *Client) Close() error { return c.CloseContext(context.Background()) }
 func (c *Client) CloseContext(ctx context.Context) error {
 	for {
 		c.mu.Lock()
+		if err := ctx.Err(); err != nil {
+			c.mu.Unlock()
+			return err
+		}
 		if c.inFlight != nil {
 			attempt := c.inFlight
+			attempt.cancel()
 			c.mu.Unlock()
 			select {
 			case <-ctx.Done():
@@ -69,10 +75,6 @@ func (c *Client) CloseContext(ctx context.Context) error {
 			case <-attempt.done:
 				continue
 			}
-		}
-		if err := ctx.Err(); err != nil {
-			c.mu.Unlock()
-			return err
 		}
 		session := c.session
 		c.session = nil
@@ -122,13 +124,17 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 			c.mu.Unlock()
 			return nil, ErrNoConnector
 		}
-		attempt := &connectAttempt{done: make(chan struct{})}
+		connectCtx, cancel := context.WithCancel(ctx)
+		attempt := &connectAttempt{done: make(chan struct{}), cancel: cancel}
 		c.inFlight = attempt
 		c.mu.Unlock()
 
-		session, err := c.connect(ctx)
+		session, err := c.connect(connectCtx)
+		connectErr := connectCtx.Err()
+		cancel()
 		if err == nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
+			if connectErr != nil {
+				ctxErr := connectErr
 				if session != nil {
 					_ = session.Close()
 				}

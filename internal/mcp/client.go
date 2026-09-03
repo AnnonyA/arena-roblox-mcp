@@ -73,11 +73,11 @@ func (c *Client) Close() error { return c.CloseContext(context.Background()) }
 func (c *Client) CloseContext(ctx context.Context) error {
 	for {
 		c.mu.Lock()
+		c.closed = true
 		if err := ctx.Err(); err != nil {
 			c.mu.Unlock()
 			return err
 		}
-		c.closed = true
 		if c.inFlight != nil {
 			attempt := c.inFlight
 			attempt.cancel()

@@ -64,6 +64,9 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		generation := r.generation
 		r.mu.Unlock()
 		tools, err := r.discover(ctx)
+		if err == nil {
+			err = ctx.Err()
+		}
 		r.mu.Lock()
 		stale := generation != r.generation
 		if err == nil && !stale {

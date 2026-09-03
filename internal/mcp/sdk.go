@@ -21,7 +21,8 @@ type CommandConfig struct {
 }
 
 func NewCommandClient(config CommandConfig) (*Client, error) {
-	if strings.TrimSpace(config.Command) == "" {
+	config = snapshotCommandConfig(config)
+	if config.Command == "" {
 		return nil, ErrMissingCommand
 	}
 	name := config.ClientName
@@ -46,6 +47,12 @@ func NewCommandClient(config CommandConfig) (*Client, error) {
 	}
 
 	return NewClient(connect), nil
+}
+
+func snapshotCommandConfig(config CommandConfig) CommandConfig {
+	config.Command = strings.TrimSpace(config.Command)
+	config.Args = append([]string(nil), config.Args...)
+	return config
 }
 
 type sdkSession struct {

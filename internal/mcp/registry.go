@@ -17,12 +17,17 @@ type Tool struct {
 
 type DiscoverFunc func(context.Context) ([]Tool, error)
 
+type registryAttempt struct {
+	done chan struct{}
+	err  error
+}
+
 type Registry struct {
 	mu         sync.Mutex
 	discover   DiscoverFunc
 	tools      []Tool
 	loaded     bool
-	inFlight   chan struct{}
+	inFlight   *registryAttempt
 	generation uint64
 }
 
@@ -42,17 +47,20 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		}
 
 		if r.inFlight != nil {
-			inFlight := r.inFlight
+			attempt := r.inFlight
 			r.mu.Unlock()
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-inFlight:
+			case <-attempt.done:
+				if attempt.err != nil {
+					return nil, attempt.err
+				}
 				continue
 			}
 		}
-		inFlight := make(chan struct{})
-		r.inFlight = inFlight
+		attempt := &registryAttempt{done: make(chan struct{})}
+		r.inFlight = attempt
 		generation := r.generation
 		r.mu.Unlock()
 		tools, err := r.discover(ctx)
@@ -62,8 +70,9 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 			r.tools = cloneTools(tools)
 			r.loaded = true
 		}
+		attempt.err = err
 		r.inFlight = nil
-		close(inFlight)
+		close(attempt.done)
 		r.mu.Unlock()
 		if err != nil {
 			return nil, err

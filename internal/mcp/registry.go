@@ -14,14 +14,11 @@ type Tool struct {
 	Description string
 	InputSchema json.RawMessage
 }
-
 type DiscoverFunc func(context.Context) ([]Tool, error)
-
 type registryAttempt struct {
 	done chan struct{}
 	err  error
 }
-
 type Registry struct {
 	mu         sync.Mutex
 	discover   DiscoverFunc
@@ -32,13 +29,16 @@ type Registry struct {
 }
 
 func NewRegistry(discover DiscoverFunc) *Registry { return &Registry{discover: discover} }
-
 func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		r.mu.Lock()
+		if err := ctx.Err(); err != nil {
+			r.mu.Unlock()
+			return nil, err
+		}
 		if r.loaded {
 			tools := cloneTools(r.tools)
 			r.mu.Unlock()
@@ -48,7 +48,6 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 			r.mu.Unlock()
 			return nil, ErrNoDiscoverer
 		}
-
 		if r.inFlight != nil {
 			attempt := r.inFlight
 			r.mu.Unlock()
@@ -92,7 +91,6 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		return cloneTools(tools), nil
 	}
 }
-
 func (r *Registry) Invalidate() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -100,7 +98,6 @@ func (r *Registry) Invalidate() {
 	r.tools = nil
 	r.loaded = false
 }
-
 func cloneTools(tools []Tool) []Tool {
 	if tools == nil {
 		return nil

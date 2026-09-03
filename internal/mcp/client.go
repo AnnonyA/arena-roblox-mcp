@@ -74,11 +74,11 @@ func (c *Client) CloseContext(ctx context.Context) error {
 	for {
 		c.mu.Lock()
 		c.closed = true
-		if err := ctx.Err(); err != nil {
-			c.mu.Unlock()
-			return err
-		}
 		if c.inFlight != nil {
+			if err := ctx.Err(); err != nil {
+				c.mu.Unlock()
+				return err
+			}
 			attempt := c.inFlight
 			attempt.cancel()
 			c.mu.Unlock()
@@ -92,11 +92,14 @@ func (c *Client) CloseContext(ctx context.Context) error {
 		session := c.session
 		c.session = nil
 		c.registry.Invalidate()
+		ctxErr := ctx.Err()
 		c.mu.Unlock()
-		if session == nil {
-			return nil
+		if session != nil {
+			if err := session.Close(); err != nil && ctxErr == nil {
+				return err
+			}
 		}
-		return session.Close()
+		return ctxErr
 	}
 }
 

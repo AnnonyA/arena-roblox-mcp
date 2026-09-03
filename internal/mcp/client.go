@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	ErrNoConnector = errors.New("mcp connector is not configured")
-	ErrNilSession  = errors.New("mcp connector returned a nil session")
+	ErrNoConnector  = errors.New("mcp connector is not configured")
+	ErrNilSession   = errors.New("mcp connector returned a nil session")
+	ErrClientClosed = errors.New("mcp client is closed")
 )
 
 type ToolResult struct {
@@ -37,6 +38,7 @@ type Client struct {
 	connect  ConnectFunc
 	session  Session
 	inFlight *connectAttempt
+	closed   bool
 	registry *Registry
 }
 
@@ -65,6 +67,7 @@ func (c *Client) CloseContext(ctx context.Context) error {
 			c.mu.Unlock()
 			return err
 		}
+		c.closed = true
 		if c.inFlight != nil {
 			attempt := c.inFlight
 			attempt.cancel()
@@ -98,6 +101,10 @@ func (c *Client) listTools(ctx context.Context) ([]Tool, error) {
 func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 	for {
 		c.mu.Lock()
+		if c.closed {
+			c.mu.Unlock()
+			return nil, ErrClientClosed
+		}
 		if c.session != nil {
 			session := c.session
 			c.mu.Unlock()

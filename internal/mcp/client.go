@@ -51,6 +51,9 @@ func NewClient(connect ConnectFunc) *Client {
 func (c *Client) Tools(ctx context.Context) ([]Tool, error) { return c.registry.Tools(ctx) }
 
 func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMessage) (ToolResult, error) {
+	if err := ctx.Err(); err != nil {
+		return ToolResult{}, err
+	}
 	session, err := c.ensureSession(ctx)
 	if err != nil {
 		return ToolResult{}, err

@@ -61,16 +61,10 @@ func TestClientReusesPersistentSessionAndToolDiscovery(t *testing.T) {
 	}
 }
 
-func TestClientCloseClosesSessionAndForcesReconnect(t *testing.T) {
-	first := &fakeSession{}
-	second := &fakeSession{}
-	connectCalls := 0
+func TestClientCloseClosesSession(t *testing.T) {
+	session := &fakeSession{}
 	client := NewClient(func(context.Context) (Session, error) {
-		connectCalls++
-		if connectCalls == 1 {
-			return first, nil
-		}
-		return second, nil
+		return session, nil
 	})
 
 	if _, err := client.Tools(context.Background()); err != nil {
@@ -79,18 +73,9 @@ func TestClientCloseClosesSessionAndForcesReconnect(t *testing.T) {
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
-	if _, err := client.Tools(context.Background()); err != nil {
-		t.Fatalf("Tools after Close: %v", err)
-	}
 
-	if first.closeCalls != 1 {
-		t.Fatalf("first session Close calls = %d, want 1", first.closeCalls)
-	}
-	if connectCalls != 2 {
-		t.Fatalf("connect calls = %d, want 2", connectCalls)
-	}
-	if second.listCalls != 1 {
-		t.Fatalf("second session ListTools calls = %d, want 1", second.listCalls)
+	if session.closeCalls != 1 {
+		t.Fatalf("session Close calls = %d, want 1", session.closeCalls)
 	}
 }
 

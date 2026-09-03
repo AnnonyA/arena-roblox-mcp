@@ -45,8 +45,8 @@ func TestClientCloseContextCanCancelWhileConnectionIsInFlight(t *testing.T) {
 	}
 
 	close(release)
-	if err := <-callDone; err != nil {
-		t.Fatalf("CallTool: %v", err)
+	if err := <-callDone; !errors.Is(err, context.Canceled) {
+		t.Fatalf("CallTool error = %v, want context.Canceled", err)
 	}
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close: %v", err)

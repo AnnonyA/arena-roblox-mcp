@@ -152,6 +152,10 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 		session, err := c.connect(connectCtx)
 		connectErr := connectCtx.Err()
 		cancel()
+		if err != nil && session != nil {
+			_ = session.Close()
+			session = nil
+		}
 		if err == nil {
 			if connectErr != nil {
 				ctxErr := connectErr

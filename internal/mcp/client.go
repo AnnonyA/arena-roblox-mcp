@@ -118,6 +118,9 @@ func (c *Client) ensureSession(ctx context.Context) (Session, error) {
 				return nil, ctx.Err()
 			case <-attempt.done:
 				if attempt.err != nil {
+					if ctx.Err() == nil && (errors.Is(attempt.err, context.Canceled) || errors.Is(attempt.err, context.DeadlineExceeded)) {
+						continue
+					}
 					return nil, attempt.err
 				}
 				continue

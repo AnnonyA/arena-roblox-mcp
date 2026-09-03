@@ -11,7 +11,13 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-var ErrMissingCommand = errors.New("mcp command is required")
+const maxToolListPages = 256
+
+var (
+	ErrMissingCommand      = errors.New("mcp command is required")
+	ErrToolPaginationCycle = errors.New("mcp tool pagination cursor repeated")
+	ErrToolPaginationLimit = errors.New("mcp tool pagination limit exceeded")
+)
 
 type CommandConfig struct {
 	Command       string
@@ -62,6 +68,8 @@ type sdkSession struct {
 func (s *sdkSession) ListTools(ctx context.Context) ([]Tool, error) {
 	var tools []Tool
 	params := &sdkmcp.ListToolsParams{}
+	seenCursors := make(map[string]struct{})
+	page := 1
 	for {
 		result, err := s.session.ListTools(ctx, params)
 		if err != nil {
@@ -84,8 +92,23 @@ func (s *sdkSession) ListTools(ctx context.Context) ([]Tool, error) {
 		if result.NextCursor == "" {
 			return tools, nil
 		}
+		page++
+		if err := validateToolPageCursor(page, seenCursors, result.NextCursor); err != nil {
+			return nil, err
+		}
 		params.Cursor = result.NextCursor
 	}
+}
+
+func validateToolPageCursor(page int, seen map[string]struct{}, cursor string) error {
+	if page > maxToolListPages {
+		return fmt.Errorf("%w: maximum %d pages", ErrToolPaginationLimit, maxToolListPages)
+	}
+	if _, ok := seen[cursor]; ok {
+		return fmt.Errorf("%w: %q", ErrToolPaginationCycle, cursor)
+	}
+	seen[cursor] = struct{}{}
+	return nil
 }
 
 func (s *sdkSession) CallTool(ctx context.Context, name string, arguments json.RawMessage) (ToolResult, error) {

@@ -59,10 +59,10 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments json.RawMe
 		return ToolResult{}, err
 	}
 	result, err := session.CallTool(ctx, name, arguments)
-	if err != nil {
-		return ToolResult{}, err
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ToolResult{}, ctxErr
 	}
-	if err := ctx.Err(); err != nil {
+	if err != nil {
 		return ToolResult{}, err
 	}
 	return result, nil

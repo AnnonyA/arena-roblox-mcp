@@ -81,3 +81,43 @@ func TestJournalUndoCandidateRejectsEmptyJournal(t *testing.T) {
 		t.Fatalf("UndoCandidate() error = %v, want ErrNoChanges", err)
 	}
 }
+
+func TestJournalCommitUndoConsumesLatestReversibleChange(t *testing.T) {
+	journal := NewJournal()
+	first := Change{Tool: "edit_script", Resource: "first", Reversible: true}
+	second := Change{Tool: "edit_script", Resource: "second", Reversible: true}
+	journal.Record(first)
+	journal.Record(second)
+
+	if err := journal.CommitUndo(); err != nil {
+		t.Fatalf("CommitUndo() error = %v", err)
+	}
+
+	changes := journal.Changes()
+	if len(changes) != 1 || changes[0] != first {
+		t.Fatalf("Changes() after CommitUndo() = %#v, want [%#v]", changes, first)
+	}
+
+	got, err := journal.UndoCandidate()
+	if err != nil {
+		t.Fatalf("UndoCandidate() after CommitUndo() error = %v", err)
+	}
+	if got != first {
+		t.Fatalf("UndoCandidate() after CommitUndo() = %#v, want %#v", got, first)
+	}
+}
+
+func TestJournalCommitUndoRejectsLatestIrreversibleChange(t *testing.T) {
+	journal := NewJournal()
+	change := Change{Tool: "delete_instance", Resource: "irreversible", Reversible: false}
+	journal.Record(change)
+
+	err := journal.CommitUndo()
+	if !errors.Is(err, ErrLatestChangeIrreversible) {
+		t.Fatalf("CommitUndo() error = %v, want ErrLatestChangeIrreversible", err)
+	}
+	changes := journal.Changes()
+	if len(changes) != 1 || changes[0] != change {
+		t.Fatalf("Changes() after rejected CommitUndo() = %#v, want [%#v]", changes, change)
+	}
+}

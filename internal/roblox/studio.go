@@ -101,6 +101,9 @@ func TargetStudio(arguments json.RawMessage, studioID string) (json.RawMessage, 
 	if err := json.Unmarshal(arguments, &args); err != nil {
 		return nil, err
 	}
+	if args == nil {
+		args = make(map[string]any)
+	}
 
 	if existing, ok := args["studio_id"]; ok && existing != studioID {
 		return nil, ErrStudioIDMismatch

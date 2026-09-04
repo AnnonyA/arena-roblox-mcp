@@ -14,6 +14,7 @@ var (
 	ErrStudioNotFound          = errors.New("requested Roblox Studio session not found")
 	ErrStudioIDRequired        = errors.New("Roblox Studio session id is required")
 	ErrStudioIDMismatch        = errors.New("tool arguments target a different Roblox Studio session")
+	ErrStudioDiscoveryFailed   = errors.New("Roblox Studio MCP discovery failed")
 )
 
 type StudioSession struct {
@@ -30,6 +31,9 @@ func DiscoverStudioSessions(ctx context.Context, caller ToolCaller) ([]StudioSes
 	result, err := caller.CallTool(ctx, "list_roblox_studios", json.RawMessage(`{}`))
 	if err != nil {
 		return nil, err
+	}
+	if result.IsError {
+		return nil, ErrStudioDiscoveryFailed
 	}
 	return ParseStudioSessions(result.StructuredContent)
 }

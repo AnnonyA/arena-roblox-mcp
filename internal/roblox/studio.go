@@ -1,8 +1,11 @@
 package roblox
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+
+	arenamcp "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
 
 var (
@@ -17,6 +20,18 @@ type StudioSession struct {
 	ID      string
 	Name    string
 	PlaceID string
+}
+
+type ToolCaller interface {
+	CallTool(context.Context, string, json.RawMessage) (arenamcp.ToolResult, error)
+}
+
+func DiscoverStudioSessions(ctx context.Context, caller ToolCaller) ([]StudioSession, error) {
+	result, err := caller.CallTool(ctx, "list_roblox_studios", json.RawMessage(`{}`))
+	if err != nil {
+		return nil, err
+	}
+	return ParseStudioSessions(result.StructuredContent)
 }
 
 func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {

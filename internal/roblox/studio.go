@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	arenamcp "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
@@ -93,7 +94,7 @@ func SelectStudio(sessions []StudioSession, requestedID string) (StudioSession, 
 }
 
 func TargetStudio(arguments json.RawMessage, studioID string) (json.RawMessage, error) {
-	if studioID == "" {
+	if strings.TrimSpace(studioID) == "" {
 		return nil, ErrStudioIDRequired
 	}
 

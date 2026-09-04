@@ -1,5 +1,7 @@
 package session
 
+import "strings"
+
 type Change struct {
 	Tool       string
 	Resource   string
@@ -22,4 +24,34 @@ func (j *Journal) Record(change Change) {
 
 func (j *Journal) Changes() []Change {
 	return append([]Change(nil), j.changes...)
+}
+
+func (j *Journal) Diff() string {
+	var diff strings.Builder
+	for _, change := range j.changes {
+		if change.Before == change.After {
+			continue
+		}
+
+		if diff.Len() > 0 {
+			diff.WriteByte('\n')
+		}
+		diff.WriteString("--- " + change.Resource + " (before)\n")
+		diff.WriteString("+++ " + change.Resource + " (after)\n")
+		diff.WriteString("@@\n")
+		writeDiffLines(&diff, "-", change.Before)
+		writeDiffLines(&diff, "+", change.After)
+	}
+	return diff.String()
+}
+
+func writeDiffLines(dst *strings.Builder, prefix, content string) {
+	if content == "" {
+		return
+	}
+	for _, line := range strings.Split(strings.TrimSuffix(content, "\n"), "\n") {
+		dst.WriteString(prefix)
+		dst.WriteString(line)
+		dst.WriteByte('\n')
+	}
 }

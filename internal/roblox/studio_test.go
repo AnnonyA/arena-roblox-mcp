@@ -79,6 +79,13 @@ func TestTargetStudioAddsSelectedStudioID(t *testing.T) {
 	}
 }
 
+func TestTargetStudioRejectsMissingStudioID(t *testing.T) {
+	_, err := TargetStudio(json.RawMessage(`{"path":"Workspace"}`), "")
+	if !errors.Is(err, ErrStudioIDRequired) {
+		t.Fatalf("TargetStudio() error = %v, want ErrStudioIDRequired", err)
+	}
+}
+
 func TestTargetStudioRejectsConflictingStudioID(t *testing.T) {
 	_, err := TargetStudio(json.RawMessage(`{"studio_id":"studio-1"}`), "studio-2")
 	if !errors.Is(err, ErrStudioIDMismatch) {

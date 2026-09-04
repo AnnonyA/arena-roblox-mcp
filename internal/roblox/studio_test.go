@@ -149,6 +149,15 @@ func TestParseStudioSessionsRejectsMissingStudioID(t *testing.T) {
 	}
 }
 
+func TestParseStudioSessionsRejectsWhitespaceStudioID(t *testing.T) {
+	payload := json.RawMessage(`{"studios":[{"studio_id":"   ","name":"Broken"}]}`)
+
+	_, err := ParseStudioSessions(payload)
+	if !errors.Is(err, ErrInvalidStudioSession) {
+		t.Fatalf("ParseStudioSessions() error = %v, want ErrInvalidStudioSession", err)
+	}
+}
+
 func TestParseStudioSessionsRejectsDuplicateStudioID(t *testing.T) {
 	payload := json.RawMessage(`{"studios":[{"studio_id":"studio-1","name":"First"},{"studio_id":"studio-1","name":"Second"}]}`)
 

@@ -56,7 +56,7 @@ func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {
 	sessions := make([]StudioSession, 0, len(response.Studios))
 	seenIDs := make(map[string]struct{}, len(response.Studios))
 	for _, studio := range response.Studios {
-		if studio.ID == "" {
+		if strings.TrimSpace(studio.ID) == "" {
 			return nil, ErrInvalidStudioSession
 		}
 		if _, exists := seenIDs[studio.ID]; exists {

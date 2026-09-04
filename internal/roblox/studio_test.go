@@ -92,3 +92,25 @@ func TestTargetStudioRejectsConflictingStudioID(t *testing.T) {
 		t.Fatalf("TargetStudio() error = %v, want ErrStudioIDMismatch", err)
 	}
 }
+
+func TestParseStudioSessionsReadsListRobloxStudiosPayload(t *testing.T) {
+	payload := json.RawMessage(`{"studios":[{"studio_id":"studio-1","name":"Dungeon","place_id":987654},{"studio_id":"studio-local","name":"Local File"}]}`)
+
+	got, err := ParseStudioSessions(payload)
+	if err != nil {
+		t.Fatalf("ParseStudioSessions() error = %v", err)
+	}
+
+	want := []StudioSession{
+		{ID: "studio-1", Name: "Dungeon", PlaceID: "987654"},
+		{ID: "studio-local", Name: "Local File"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("len(ParseStudioSessions()) = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("ParseStudioSessions()[%d] = %#v, want %#v", i, got[i], want[i])
+		}
+	}
+}

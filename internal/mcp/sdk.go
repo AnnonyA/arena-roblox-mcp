@@ -57,6 +57,8 @@ func NewCommandClient(config CommandConfig) (*Client, error) {
 
 func snapshotCommandConfig(config CommandConfig) CommandConfig {
 	config.Command = strings.TrimSpace(config.Command)
+	config.ClientName = strings.TrimSpace(config.ClientName)
+	config.ClientVersion = strings.TrimSpace(config.ClientVersion)
 	config.Args = append([]string(nil), config.Args...)
 	return config
 }

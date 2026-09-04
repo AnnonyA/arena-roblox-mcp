@@ -82,6 +82,21 @@ func TestTargetStudioAddsSelectedStudioID(t *testing.T) {
 	}
 }
 
+func TestTargetStudioTreatsNullArgumentsAsEmptyObject(t *testing.T) {
+	got, err := TargetStudio(json.RawMessage(`null`), "studio-2")
+	if err != nil {
+		t.Fatalf("TargetStudio() error = %v", err)
+	}
+
+	var args map[string]any
+	if err := json.Unmarshal(got, &args); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if args["studio_id"] != "studio-2" {
+		t.Fatalf("studio_id = %#v, want studio-2", args["studio_id"])
+	}
+}
+
 func TestTargetStudioRejectsMissingStudioID(t *testing.T) {
 	_, err := TargetStudio(json.RawMessage(`{"path":"Workspace"}`), "")
 	if !errors.Is(err, ErrStudioIDRequired) {

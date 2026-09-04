@@ -22,3 +22,9 @@ func TestDefaultWindowsCommandUsesLocalAppDataRobloxMCPBatch(t *testing.T) {
 		t.Fatalf("Args = %#v, want %#v", got.Args, wantArgs)
 	}
 }
+
+func TestDefaultWindowsCommandRejectsMissingLocalAppData(t *testing.T) {
+	if _, err := DefaultWindowsCommand(" \t "); err == nil {
+		t.Fatal("DefaultWindowsCommand() error = nil, want missing LOCALAPPDATA error")
+	}
+}

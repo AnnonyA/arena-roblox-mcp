@@ -1,11 +1,15 @@
 package roblox
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+)
 
 var (
 	ErrNoStudioSessions        = errors.New("no Roblox Studio MCP session detected")
 	ErrStudioSelectionRequired = errors.New("multiple Roblox Studio sessions detected; studio_id is required")
 	ErrStudioNotFound          = errors.New("requested Roblox Studio session not found")
+	ErrStudioIDMismatch        = errors.New("tool arguments target a different Roblox Studio session")
 )
 
 type StudioSession struct {
@@ -32,4 +36,18 @@ func SelectStudio(sessions []StudioSession, requestedID string) (StudioSession, 
 	}
 
 	return StudioSession{}, ErrStudioSelectionRequired
+}
+
+func TargetStudio(arguments json.RawMessage, studioID string) (json.RawMessage, error) {
+	var args map[string]any
+	if err := json.Unmarshal(arguments, &args); err != nil {
+		return nil, err
+	}
+
+	if existing, ok := args["studio_id"]; ok && existing != studioID {
+		return nil, ErrStudioIDMismatch
+	}
+	args["studio_id"] = studioID
+
+	return json.Marshal(args)
 }

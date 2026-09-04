@@ -15,6 +15,7 @@ var (
 	ErrStudioIDRequired        = errors.New("Roblox Studio session id is required")
 	ErrStudioIDMismatch        = errors.New("tool arguments target a different Roblox Studio session")
 	ErrStudioDiscoveryFailed   = errors.New("Roblox Studio MCP discovery failed")
+	ErrInvalidStudioSession    = errors.New("Roblox Studio MCP discovery returned a session without studio_id")
 )
 
 type StudioSession struct {
@@ -52,6 +53,9 @@ func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {
 
 	sessions := make([]StudioSession, 0, len(response.Studios))
 	for _, studio := range response.Studios {
+		if studio.ID == "" {
+			return nil, ErrInvalidStudioSession
+		}
 		sessions = append(sessions, StudioSession{
 			ID:      studio.ID,
 			Name:    studio.Name,

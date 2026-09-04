@@ -9,6 +9,7 @@ var (
 	ErrNoStudioSessions        = errors.New("no Roblox Studio MCP session detected")
 	ErrStudioSelectionRequired = errors.New("multiple Roblox Studio sessions detected; studio_id is required")
 	ErrStudioNotFound          = errors.New("requested Roblox Studio session not found")
+	ErrStudioIDRequired        = errors.New("Roblox Studio session id is required")
 	ErrStudioIDMismatch        = errors.New("tool arguments target a different Roblox Studio session")
 )
 
@@ -39,6 +40,10 @@ func SelectStudio(sessions []StudioSession, requestedID string) (StudioSession, 
 }
 
 func TargetStudio(arguments json.RawMessage, studioID string) (json.RawMessage, error) {
+	if studioID == "" {
+		return nil, ErrStudioIDRequired
+	}
+
 	var args map[string]any
 	if err := json.Unmarshal(arguments, &args); err != nil {
 		return nil, err

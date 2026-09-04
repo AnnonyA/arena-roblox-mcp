@@ -1,9 +1,12 @@
 package roblox
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
+
+	arenamcp "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
 
 func TestSelectStudioRejectsNoSessions(t *testing.T) {
@@ -112,5 +115,39 @@ func TestParseStudioSessionsReadsListRobloxStudiosPayload(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("ParseStudioSessions()[%d] = %#v, want %#v", i, got[i], want[i])
 		}
+	}
+}
+
+type fakeToolCaller struct {
+	name       string
+	arguments  json.RawMessage
+	result     arenamcp.ToolResult
+	err        error
+}
+
+func (f *fakeToolCaller) CallTool(_ context.Context, name string, arguments json.RawMessage) (arenamcp.ToolResult, error) {
+	f.name = name
+	f.arguments = append(json.RawMessage(nil), arguments...)
+	return f.result, f.err
+}
+
+func TestDiscoverStudioSessionsCallsListRobloxStudios(t *testing.T) {
+	caller := &fakeToolCaller{result: arenamcp.ToolResult{
+		StructuredContent: json.RawMessage(`{"studios":[{"studio_id":"studio-1","name":"Dungeon","place_id":987654}]}`),
+	}}
+
+	got, err := DiscoverStudioSessions(context.Background(), caller)
+	if err != nil {
+		t.Fatalf("DiscoverStudioSessions() error = %v", err)
+	}
+	if caller.name != "list_roblox_studios" {
+		t.Fatalf("tool name = %q, want list_roblox_studios", caller.name)
+	}
+	if string(caller.arguments) != `{}` {
+		t.Fatalf("arguments = %s, want {}", caller.arguments)
+	}
+	want := StudioSession{ID: "studio-1", Name: "Dungeon", PlaceID: "987654"}
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("DiscoverStudioSessions() = %#v, want %#v", got, []StudioSession{want})
 	}
 }

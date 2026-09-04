@@ -118,6 +118,15 @@ func TestParseStudioSessionsReadsListRobloxStudiosPayload(t *testing.T) {
 	}
 }
 
+func TestParseStudioSessionsRejectsMissingStudioID(t *testing.T) {
+	payload := json.RawMessage(`{"studios":[{"name":"Broken"}]}`)
+
+	_, err := ParseStudioSessions(payload)
+	if !errors.Is(err, ErrInvalidStudioSession) {
+		t.Fatalf("ParseStudioSessions() error = %v, want ErrInvalidStudioSession", err)
+	}
+}
+
 type fakeToolCaller struct {
 	name      string
 	arguments json.RawMessage

@@ -127,6 +127,15 @@ func TestParseStudioSessionsRejectsMissingStudioID(t *testing.T) {
 	}
 }
 
+func TestParseStudioSessionsRejectsDuplicateStudioID(t *testing.T) {
+	payload := json.RawMessage(`{"studios":[{"studio_id":"studio-1","name":"First"},{"studio_id":"studio-1","name":"Second"}]}`)
+
+	_, err := ParseStudioSessions(payload)
+	if !errors.Is(err, ErrDuplicateStudioSession) {
+		t.Fatalf("ParseStudioSessions() error = %v, want ErrDuplicateStudioSession", err)
+	}
+}
+
 type fakeToolCaller struct {
 	name      string
 	arguments json.RawMessage

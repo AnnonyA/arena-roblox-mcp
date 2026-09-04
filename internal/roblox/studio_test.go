@@ -1,6 +1,7 @@
 package roblox
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -57,5 +58,30 @@ func TestSelectStudioRejectsUnknownRequestedID(t *testing.T) {
 	_, err := SelectStudio(sessions, "missing")
 	if !errors.Is(err, ErrStudioNotFound) {
 		t.Fatalf("SelectStudio() error = %v, want ErrStudioNotFound", err)
+	}
+}
+
+func TestTargetStudioAddsSelectedStudioID(t *testing.T) {
+	got, err := TargetStudio(json.RawMessage(`{"path":"Workspace"}`), "studio-2")
+	if err != nil {
+		t.Fatalf("TargetStudio() error = %v", err)
+	}
+
+	var args map[string]any
+	if err := json.Unmarshal(got, &args); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if args["studio_id"] != "studio-2" {
+		t.Fatalf("studio_id = %#v, want studio-2", args["studio_id"])
+	}
+	if args["path"] != "Workspace" {
+		t.Fatalf("path = %#v, want Workspace", args["path"])
+	}
+}
+
+func TestTargetStudioRejectsConflictingStudioID(t *testing.T) {
+	_, err := TargetStudio(json.RawMessage(`{"studio_id":"studio-1"}`), "studio-2")
+	if !errors.Is(err, ErrStudioIDMismatch) {
+		t.Fatalf("TargetStudio() error = %v, want ErrStudioIDMismatch", err)
 	}
 }

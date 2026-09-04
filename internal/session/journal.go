@@ -1,6 +1,14 @@
 package session
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
+
+var (
+	ErrNoChanges                = errors.New("no session changes recorded")
+	ErrLatestChangeIrreversible = errors.New("latest session change is not reversible")
+)
 
 type Change struct {
 	Tool       string
@@ -24,6 +32,18 @@ func (j *Journal) Record(change Change) {
 
 func (j *Journal) Changes() []Change {
 	return append([]Change(nil), j.changes...)
+}
+
+func (j *Journal) UndoCandidate() (Change, error) {
+	if len(j.changes) == 0 {
+		return Change{}, ErrNoChanges
+	}
+
+	latest := j.changes[len(j.changes)-1]
+	if !latest.Reversible {
+		return Change{}, ErrLatestChangeIrreversible
+	}
+	return latest, nil
 }
 
 func (j *Journal) Diff() string {

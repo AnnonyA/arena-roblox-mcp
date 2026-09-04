@@ -22,3 +22,24 @@ func TestJournalRecordsReversibleChange(t *testing.T) {
 		t.Fatalf("Changes()[0] = %#v, want %#v", got[0], change)
 	}
 }
+
+func TestJournalDiffFormatsReversibleScriptChange(t *testing.T) {
+	journal := NewJournal()
+	journal.Record(Change{
+		Tool:       "edit_script",
+		Resource:   "game.ServerScriptService.Main",
+		Before:     "print(\"before\")\n",
+		After:      "print(\"after\")\n",
+		Reversible: true,
+	})
+
+	const want = "--- game.ServerScriptService.Main (before)\n" +
+		"+++ game.ServerScriptService.Main (after)\n" +
+		"@@\n" +
+		"-print(\"before\")\n" +
+		"+print(\"after\")\n"
+
+	if got := journal.Diff(); got != want {
+		t.Fatalf("Diff() = %q, want %q", got, want)
+	}
+}

@@ -14,8 +14,32 @@ var (
 )
 
 type StudioSession struct {
-	ID   string
-	Name string
+	ID      string
+	Name    string
+	PlaceID string
+}
+
+func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {
+	var response struct {
+		Studios []struct {
+			ID      string      `json:"studio_id"`
+			Name    string      `json:"name"`
+			PlaceID json.Number `json:"place_id"`
+		} `json:"studios"`
+	}
+	if err := json.Unmarshal(payload, &response); err != nil {
+		return nil, err
+	}
+
+	sessions := make([]StudioSession, 0, len(response.Studios))
+	for _, studio := range response.Studios {
+		sessions = append(sessions, StudioSession{
+			ID:      studio.ID,
+			Name:    studio.Name,
+			PlaceID: studio.PlaceID.String(),
+		})
+	}
+	return sessions, nil
 }
 
 func SelectStudio(sessions []StudioSession, requestedID string) (StudioSession, error) {

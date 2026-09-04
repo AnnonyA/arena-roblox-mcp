@@ -119,10 +119,10 @@ func TestParseStudioSessionsReadsListRobloxStudiosPayload(t *testing.T) {
 }
 
 type fakeToolCaller struct {
-	name       string
-	arguments  json.RawMessage
-	result     arenamcp.ToolResult
-	err        error
+	name      string
+	arguments json.RawMessage
+	result    arenamcp.ToolResult
+	err       error
 }
 
 func (f *fakeToolCaller) CallTool(_ context.Context, name string, arguments json.RawMessage) (arenamcp.ToolResult, error) {
@@ -149,5 +149,17 @@ func TestDiscoverStudioSessionsCallsListRobloxStudios(t *testing.T) {
 	want := StudioSession{ID: "studio-1", Name: "Dungeon", PlaceID: "987654"}
 	if len(got) != 1 || got[0] != want {
 		t.Fatalf("DiscoverStudioSessions() = %#v, want %#v", got, []StudioSession{want})
+	}
+}
+
+func TestDiscoverStudioSessionsRejectsMCPErrorResult(t *testing.T) {
+	caller := &fakeToolCaller{result: arenamcp.ToolResult{
+		StructuredContent: json.RawMessage(`{"studios":[]}`),
+		IsError:           true,
+	}}
+
+	_, err := DiscoverStudioSessions(context.Background(), caller)
+	if err == nil {
+		t.Fatal("DiscoverStudioSessions() error = nil, want MCP discovery error")
 	}
 }

@@ -46,6 +46,14 @@ func (j *Journal) UndoCandidate() (Change, error) {
 	return latest, nil
 }
 
+func (j *Journal) CommitUndo() error {
+	if _, err := j.UndoCandidate(); err != nil {
+		return err
+	}
+	j.changes = j.changes[:len(j.changes)-1]
+	return nil
+}
+
 func (j *Journal) Diff() string {
 	var diff strings.Builder
 	for _, change := range j.changes {

@@ -15,6 +15,21 @@ func TestNewCommandClientRejectsMissingCommand(t *testing.T) {
 	}
 }
 
+func TestSnapshotCommandConfigNormalizesClientMetadata(t *testing.T) {
+	config := snapshotCommandConfig(CommandConfig{
+		Command:       "  roblox-mcp  ",
+		ClientName:    "  arena-rbx  ",
+		ClientVersion: "  0.1.0  ",
+	})
+
+	if config.ClientName != "arena-rbx" {
+		t.Fatalf("ClientName = %q, want %q", config.ClientName, "arena-rbx")
+	}
+	if config.ClientVersion != "0.1.0" {
+		t.Fatalf("ClientVersion = %q, want %q", config.ClientVersion, "0.1.0")
+	}
+}
+
 func TestValidateToolPageCursorRejectsRepeatedCursor(t *testing.T) {
 	seen := map[string]struct{}{}
 	if err := validateToolPageCursor(1, seen, "next"); err != nil {

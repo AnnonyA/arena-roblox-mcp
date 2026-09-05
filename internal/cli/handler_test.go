@@ -65,3 +65,31 @@ func TestCommandHandlerClearsConversation(t *testing.T) {
 		t.Fatal("clear delegated to next handler")
 	}
 }
+
+func TestCommandHandlerWritesStatus(t *testing.T) {
+	var out bytes.Buffer
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	status := func() StartupStatus {
+		return StartupStatus{Arena: "connected", Studio: "offline", Model: "arena-code", Session: "default"}
+	}
+	handler := NewCommandHandlerWithActions(&out, CommandActions{Status: status}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "status"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("status unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("status delegated to next handler")
+	}
+	const want = "Arena      connected\nStudio     offline\nModel      arena-code\nSession    default\n"
+	if got := out.String(); got != want {
+		t.Fatalf("status output = %q, want %q", got, want)
+	}
+}

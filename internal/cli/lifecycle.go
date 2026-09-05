@@ -31,7 +31,10 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 
 		input, err := ParseLine(scanner.Text())
 		if err != nil {
-			return err
+			if _, writeErr := io.WriteString(out, "Error: "+err.Error()+"\n"); writeErr != nil {
+				return writeErr
+			}
+			continue
 		}
 		if input.Kind == InputEmpty {
 			continue
@@ -39,7 +42,13 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 
 		exit, err := handler(ctx, input)
 		if err != nil {
-			return err
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return ctxErr
+			}
+			if _, writeErr := io.WriteString(out, "Error: "+err.Error()+"\n"); writeErr != nil {
+				return writeErr
+			}
+			continue
 		}
 		if exit {
 			return nil

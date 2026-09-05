@@ -12,6 +12,7 @@ type CommandActions struct {
 	Status func() StartupStatus
 	Models func(context.Context) ([]string, error)
 	Model  func(context.Context, string) error
+	Tools  func(context.Context) ([]string, error)
 }
 
 func NewCommandHandler(out io.Writer, next InputHandler) InputHandler {
@@ -61,6 +62,20 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		}
 		if input.Kind == InputCommand && input.Command == "model" && actions.Model != nil {
 			return false, actions.Model(ctx, input.Argument)
+		}
+		if input.Kind == InputCommand && input.Command == "tools" && actions.Tools != nil {
+			tools, err := actions.Tools(ctx)
+			if err != nil {
+				return false, err
+			}
+			if out == nil {
+				return false, errors.New("cli: nil output")
+			}
+			if len(tools) == 0 {
+				return false, nil
+			}
+			_, err = io.WriteString(out, strings.Join(tools, "\n")+"\n")
+			return false, err
 		}
 		if next == nil {
 			return false, nil

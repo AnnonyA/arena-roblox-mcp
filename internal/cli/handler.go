@@ -8,12 +8,13 @@ import (
 )
 
 type CommandActions struct {
-	Clear  func()
-	Status func() StartupStatus
-	Models func(context.Context) ([]string, error)
-	Model  func(context.Context, string) error
-	Studio func(context.Context, string) error
-	Tools  func(context.Context) ([]string, error)
+	Clear   func()
+	Status  func() StartupStatus
+	Models  func(context.Context) ([]string, error)
+	Model   func(context.Context, string) error
+	Studio  func(context.Context, string) error
+	Tools   func(context.Context) ([]string, error)
+	History func(context.Context) ([]string, error)
 }
 
 func NewCommandHandler(out io.Writer, next InputHandler) InputHandler {
@@ -79,6 +80,20 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 				return false, nil
 			}
 			_, err = io.WriteString(out, strings.Join(tools, "\n")+"\n")
+			return false, err
+		}
+		if input.Kind == InputCommand && input.Command == "history" && actions.History != nil {
+			history, err := actions.History(ctx)
+			if err != nil {
+				return false, err
+			}
+			if out == nil {
+				return false, errors.New("cli: nil output")
+			}
+			if len(history) == 0 {
+				return false, nil
+			}
+			_, err = io.WriteString(out, strings.Join(history, "\n")+"\n")
 			return false, err
 		}
 		if next == nil {

@@ -289,3 +289,31 @@ func TestCommandHandlerUndoesLatestChange(t *testing.T) {
 		t.Fatal("undo command did not invoke undo action")
 	}
 }
+
+func TestCommandHandlerWritesConfig(t *testing.T) {
+	var out bytes.Buffer
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	config := func(context.Context) (string, error) {
+		return "arena.model=arena-code\nagent.maxToolRounds=12\nagent.safeMode=true\n", nil
+	}
+	handler := NewCommandHandlerWithActions(&out, CommandActions{Config: config}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "config"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("config unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("config delegated to next handler")
+	}
+	const want = "arena.model=arena-code\nagent.maxToolRounds=12\nagent.safeMode=true\n"
+	if got := out.String(); got != want {
+		t.Fatalf("config output = %q, want %q", got, want)
+	}
+}

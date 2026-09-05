@@ -24,6 +24,10 @@ func (c *Context) Add(event Event) {
 	}
 }
 
+func (c *Context) Clear() {
+	c.events = nil
+}
+
 func (c *Context) CompactToolOutputs(maxRunes int) {
 	if maxRunes < 0 || len(c.events) < 2 {
 		return

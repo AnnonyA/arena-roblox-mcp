@@ -61,3 +61,16 @@ func TestContextCompactionPreservesUTF8(t *testing.T) {
 		t.Fatalf("compacted content = %q, want UTF-8-safe prefix", got[0].Content)
 	}
 }
+
+func TestContextClearRemovesConversationEvents(t *testing.T) {
+	ctx := NewContext(3)
+	ctx.Add(Event{Role: "user", Content: "task"})
+	ctx.Add(Event{Role: "assistant", Content: "working"})
+	ctx.Add(Event{Role: "tool", Content: "result"})
+
+	ctx.Clear()
+
+	if got := ctx.Events(); len(got) != 0 {
+		t.Fatalf("Events() len after Clear = %d, want 0", len(got))
+	}
+}

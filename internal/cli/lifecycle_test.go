@@ -62,3 +62,21 @@ func TestRunReportsLineErrorsAndContinues(t *testing.T) {
 		t.Fatalf("output = %q, want %q", gotOutput, wantOutput)
 	}
 }
+
+func TestRunReturnsToPromptAfterActiveCancellation(t *testing.T) {
+	in := strings.NewReader("cancel task\n/exit\n")
+	var out strings.Builder
+
+	err := Run(context.Background(), in, &out, func(_ context.Context, input Input) (bool, error) {
+		if input.Kind == InputTask && input.Task == "cancel task" {
+			return false, context.Canceled
+		}
+		return input.Kind == InputCommand && input.Command == "exit", nil
+	})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if gotOutput := out.String(); gotOutput != "> > " {
+		t.Fatalf("output = %q, want %q", gotOutput, "> > ")
+	}
+}

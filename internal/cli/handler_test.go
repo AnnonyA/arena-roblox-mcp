@@ -121,3 +121,31 @@ func TestCommandHandlerWritesModels(t *testing.T) {
 		t.Fatalf("models output = %q, want %q", got, want)
 	}
 }
+
+func TestCommandHandlerChangesModel(t *testing.T) {
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	var selected string
+	model := func(_ context.Context, id string) error {
+		selected = id
+		return nil
+	}
+	handler := NewCommandHandlerWithActions(nil, CommandActions{Model: model}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "model", Argument: "arena-code"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("model unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("model delegated to next handler")
+	}
+	if selected != "arena-code" {
+		t.Fatalf("selected model = %q, want %q", selected, "arena-code")
+	}
+}

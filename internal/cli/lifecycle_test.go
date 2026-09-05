@@ -8,6 +8,20 @@ import (
 	"testing"
 )
 
+func TestRunRejectsNilInput(t *testing.T) {
+	var out strings.Builder
+
+	err := Run(context.Background(), nil, &out, func(context.Context, Input) (bool, error) {
+		return false, nil
+	})
+	if err == nil || err.Error() != "cli: nil input" {
+		t.Fatalf("Run() error = %v, want %q", err, "cli: nil input")
+	}
+	if got := out.String(); got != "" {
+		t.Fatalf("output = %q, want empty", got)
+	}
+}
+
 func TestRunDispatchesInputUntilHandlerExits(t *testing.T) {
 	in := strings.NewReader("inspect Workspace\n/exit\n")
 	var out strings.Builder

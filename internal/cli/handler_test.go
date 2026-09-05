@@ -177,3 +177,31 @@ func TestCommandHandlerWritesTools(t *testing.T) {
 		t.Fatalf("tools output = %q, want %q", got, want)
 	}
 }
+
+func TestCommandHandlerSelectsStudio(t *testing.T) {
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	var selected string
+	studio := func(_ context.Context, id string) error {
+		selected = id
+		return nil
+	}
+	handler := NewCommandHandlerWithActions(nil, CommandActions{Studio: studio}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "studio", Argument: "studio-2"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("studio unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("studio delegated to next handler")
+	}
+	if selected != "studio-2" {
+		t.Fatalf("selected studio = %q, want %q", selected, "studio-2")
+	}
+}

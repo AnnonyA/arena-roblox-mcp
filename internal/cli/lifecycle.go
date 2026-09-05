@@ -16,6 +16,9 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 	if in == nil {
 		return errors.New("cli: nil input")
 	}
+	if out == nil {
+		return errors.New("cli: nil output")
+	}
 	if handler == nil {
 		return errors.New("cli: nil input handler")
 	}

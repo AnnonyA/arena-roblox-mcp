@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -38,6 +39,21 @@ var supportedCommands = map[string]struct{}{
 	"exit":    {},
 }
 
+var commandDescriptions = map[string]string{
+	"model":   "change model",
+	"models":  "list Arena models",
+	"studio":  "select Studio instance",
+	"status":  "show Arena/MCP/Studio state",
+	"tools":   "show available MCP tools",
+	"history": "show session actions and tool calls",
+	"diff":    "show recorded changes",
+	"undo":    "revert the latest supported reversible change",
+	"clear":   "clear conversational context",
+	"config":  "show effective non-secret configuration",
+	"help":    "show commands",
+	"exit":    "exit cleanly",
+}
+
 func ParseLine(line string) (Input, error) {
 	line = strings.TrimSpace(line)
 	if line == "" {
@@ -55,4 +71,19 @@ func ParseLine(line string) (Input, error) {
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
+}
+
+func HelpText() string {
+	commands := make([]string, 0, len(supportedCommands))
+	for command := range supportedCommands {
+		commands = append(commands, command)
+	}
+	sort.Strings(commands)
+
+	var help strings.Builder
+	help.WriteString("Commands:\n")
+	for _, command := range commands {
+		fmt.Fprintf(&help, "/%s  %s\n", command, commandDescriptions[command])
+	}
+	return help.String()
 }

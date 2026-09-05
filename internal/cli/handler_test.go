@@ -261,3 +261,31 @@ func TestCommandHandlerWritesDiff(t *testing.T) {
 		t.Fatalf("diff output = %q, want %q", got, want)
 	}
 }
+
+func TestCommandHandlerUndoesLatestChange(t *testing.T) {
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	undone := false
+	undo := func(context.Context) error {
+		undone = true
+		return nil
+	}
+	handler := NewCommandHandlerWithActions(nil, CommandActions{Undo: undo}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "undo"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("undo unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("undo delegated to next handler")
+	}
+	if !undone {
+		t.Fatal("undo command did not invoke undo action")
+	}
+}

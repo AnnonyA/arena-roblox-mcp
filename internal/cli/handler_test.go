@@ -205,3 +205,31 @@ func TestCommandHandlerSelectsStudio(t *testing.T) {
 		t.Fatalf("selected studio = %q, want %q", selected, "studio-2")
 	}
 }
+
+func TestCommandHandlerWritesHistory(t *testing.T) {
+	var out bytes.Buffer
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	history := func(context.Context) ([]string, error) {
+		return []string{"read_script: inspected PlayerController", "write_script: updated jump logic"}, nil
+	}
+	handler := NewCommandHandlerWithActions(&out, CommandActions{History: history}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "history"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("history unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("history delegated to next handler")
+	}
+	const want = "read_script: inspected PlayerController\nwrite_script: updated jump logic\n"
+	if got := out.String(); got != want {
+		t.Fatalf("history output = %q, want %q", got, want)
+	}
+}

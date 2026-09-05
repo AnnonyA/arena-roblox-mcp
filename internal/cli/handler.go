@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 )
 
 type CommandActions struct {
 	Clear  func()
 	Status func() StartupStatus
+	Models func(context.Context) ([]string, error)
 }
 
 func NewCommandHandler(out io.Writer, next InputHandler) InputHandler {
@@ -40,6 +42,20 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 				return false, errors.New("cli: nil output")
 			}
 			_, err := io.WriteString(out, StatusText(actions.Status()))
+			return false, err
+		}
+		if input.Kind == InputCommand && input.Command == "models" && actions.Models != nil {
+			models, err := actions.Models(ctx)
+			if err != nil {
+				return false, err
+			}
+			if out == nil {
+				return false, errors.New("cli: nil output")
+			}
+			if len(models) == 0 {
+				return false, nil
+			}
+			_, err = io.WriteString(out, strings.Join(models, "\n")+"\n")
 			return false, err
 		}
 		if next == nil {

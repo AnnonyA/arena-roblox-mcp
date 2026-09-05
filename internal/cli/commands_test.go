@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -38,5 +39,15 @@ func TestParseLineRejectsUnknownSlashCommand(t *testing.T) {
 	_, err := ParseLine("/explode")
 	if !errors.Is(err, ErrUnknownCommand) {
 		t.Fatalf("ParseLine() error = %v, want ErrUnknownCommand", err)
+	}
+}
+
+func TestHelpTextListsEverySupportedCommandWithDescription(t *testing.T) {
+	help := HelpText()
+	for command := range supportedCommands {
+		needle := "/" + command + "  "
+		if !strings.Contains(help, needle) {
+			t.Fatalf("HelpText() missing command description for %q", command)
+		}
 	}
 }

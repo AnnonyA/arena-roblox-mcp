@@ -9,7 +9,10 @@ import (
 	mcppkg "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
 
-var ErrUnknownTool = errors.New("unknown tool")
+var (
+	ErrUnknownTool          = errors.New("unknown tool")
+	ErrInvalidToolArguments = errors.New("invalid tool arguments")
+)
 
 type ToolCaller interface {
 	CallTool(context.Context, string, json.RawMessage) (mcppkg.ToolResult, error)
@@ -31,6 +34,9 @@ func NewToolDispatcher(toolNames []string, caller ToolCaller) *ToolDispatcher {
 func (d *ToolDispatcher) Dispatch(ctx context.Context, name string, arguments json.RawMessage) (mcppkg.ToolResult, error) {
 	if _, ok := d.allowed[name]; !ok {
 		return mcppkg.ToolResult{}, fmt.Errorf("%w: %s", ErrUnknownTool, name)
+	}
+	if !json.Valid(arguments) {
+		return mcppkg.ToolResult{}, ErrInvalidToolArguments
 	}
 	return d.caller.CallTool(ctx, name, arguments)
 }

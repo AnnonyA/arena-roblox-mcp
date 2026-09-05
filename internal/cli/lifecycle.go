@@ -45,6 +45,9 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return ctxErr
 			}
+			if errors.Is(err, context.Canceled) {
+				continue
+			}
 			if _, writeErr := io.WriteString(out, "Error: "+err.Error()+"\n"); writeErr != nil {
 				return writeErr
 			}

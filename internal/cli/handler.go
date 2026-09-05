@@ -17,6 +17,7 @@ type CommandActions struct {
 	History func(context.Context) ([]string, error)
 	Diff    func(context.Context) (string, error)
 	Undo    func(context.Context) error
+	Config  func(context.Context) (string, error)
 }
 
 func NewCommandHandler(out io.Writer, next InputHandler) InputHandler {
@@ -114,6 +115,20 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		}
 		if input.Kind == InputCommand && input.Command == "undo" && actions.Undo != nil {
 			return false, actions.Undo(ctx)
+		}
+		if input.Kind == InputCommand && input.Command == "config" && actions.Config != nil {
+			config, err := actions.Config(ctx)
+			if err != nil {
+				return false, err
+			}
+			if out == nil {
+				return false, errors.New("cli: nil output")
+			}
+			if config == "" {
+				return false, nil
+			}
+			_, err = io.WriteString(out, config)
+			return false, err
 		}
 		if next == nil {
 			return false, nil

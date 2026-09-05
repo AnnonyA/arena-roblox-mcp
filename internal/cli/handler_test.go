@@ -233,3 +233,31 @@ func TestCommandHandlerWritesHistory(t *testing.T) {
 		t.Fatalf("history output = %q, want %q", got, want)
 	}
 }
+
+func TestCommandHandlerWritesDiff(t *testing.T) {
+	var out bytes.Buffer
+	delegated := false
+	next := func(context.Context, Input) (bool, error) {
+		delegated = true
+		return false, nil
+	}
+	diff := func(context.Context) (string, error) {
+		return "--- before\n+++ after\n-old\n+new\n", nil
+	}
+	handler := NewCommandHandlerWithActions(&out, CommandActions{Diff: diff}, next)
+
+	exit, err := handler(context.Background(), Input{Kind: InputCommand, Command: "diff"})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if exit {
+		t.Fatal("diff unexpectedly requested exit")
+	}
+	if delegated {
+		t.Fatal("diff delegated to next handler")
+	}
+	const want = "--- before\n+++ after\n-old\n+new\n"
+	if got := out.String(); got != want {
+		t.Fatalf("diff output = %q, want %q", got, want)
+	}
+}

@@ -15,6 +15,7 @@ type CommandActions struct {
 	Studio  func(context.Context, string) error
 	Tools   func(context.Context) ([]string, error)
 	History func(context.Context) ([]string, error)
+	Diff    func(context.Context) (string, error)
 }
 
 func NewCommandHandler(out io.Writer, next InputHandler) InputHandler {
@@ -94,6 +95,20 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 				return false, nil
 			}
 			_, err = io.WriteString(out, strings.Join(history, "\n")+"\n")
+			return false, err
+		}
+		if input.Kind == InputCommand && input.Command == "diff" && actions.Diff != nil {
+			diff, err := actions.Diff(ctx)
+			if err != nil {
+				return false, err
+			}
+			if out == nil {
+				return false, errors.New("cli: nil output")
+			}
+			if diff == "" {
+				return false, nil
+			}
+			_, err = io.WriteString(out, diff)
 			return false, err
 		}
 		if next == nil {

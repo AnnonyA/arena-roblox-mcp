@@ -36,6 +36,20 @@ func TestToolDispatcherRejectsUnknownToolWithoutCallingBackend(t *testing.T) {
 	}
 }
 
+func TestToolDispatcherRejectsMalformedArgumentsWithoutCallingBackend(t *testing.T) {
+	caller := &recordingToolCaller{}
+	dispatcher := NewToolDispatcher([]string{"read_script"}, caller)
+
+	_, err := dispatcher.Dispatch(context.Background(), "read_script", json.RawMessage(`{"path":`))
+
+	if !errors.Is(err, ErrInvalidToolArguments) {
+		t.Fatalf("Dispatch() error = %v, want ErrInvalidToolArguments", err)
+	}
+	if caller.calls != 0 {
+		t.Fatalf("backend calls = %d, want 0", caller.calls)
+	}
+}
+
 func TestToolDispatcherCallsKnownTool(t *testing.T) {
 	caller := &recordingToolCaller{}
 	dispatcher := NewToolDispatcher([]string{"read_script"}, caller)

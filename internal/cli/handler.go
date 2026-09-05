@@ -15,6 +15,9 @@ func NewCommandHandler(out io.Writer, next InputHandler) InputHandler {
 			_, err := io.WriteString(out, HelpText())
 			return false, err
 		}
+		if input.Kind == InputCommand && input.Command == "exit" {
+			return true, nil
+		}
 		if next == nil {
 			return false, nil
 		}

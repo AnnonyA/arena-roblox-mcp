@@ -320,6 +320,7 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 		if err != nil {
 			return false, err
 		}
+		status.Arena = "connected"
 		conversation.Add(agent.Event{Role: "user", Content: input.Task})
 		if assistantReply != "" {
 			conversation.Add(agent.Event{Role: "assistant", Content: assistantReply})

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -45,13 +46,16 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 	if modelName == "" {
 		modelName = strings.TrimSpace(cfg.Arena.Model)
 	}
-	if modelName == "" {
-		modelName = "not selected"
+	cfg.Arena.Model = modelName
+
+	displayModel := modelName
+	if displayModel == "" {
+		displayModel = "not selected"
 	}
 	status := cli.StartupStatus{
 		Arena:   "not connected",
 		Studio:  "not connected",
-		Model:   modelName,
+		Model:   displayModel,
 		Session: "default",
 	}
 	startup := strings.TrimSuffix(cli.StartupText(status), "> ")
@@ -61,6 +65,13 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 
 	actions := cli.CommandActions{
 		Status: func() cli.StartupStatus { return status },
+		Config: func(context.Context) (string, error) {
+			data, err := json.MarshalIndent(cfg, "", "  ")
+			if err != nil {
+				return "", fmt.Errorf("render config: %w", err)
+			}
+			return string(data) + "\n", nil
+		},
 	}
 	return cli.Run(ctx, in, out, cli.NewCommandHandlerWithActions(out, actions, nil))
 }

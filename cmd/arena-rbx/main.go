@@ -265,7 +265,27 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			if err != nil {
 				return err
 			}
-			selected, err := roblox.SelectStudio(sessions, strings.TrimSpace(id))
+			requestedID := strings.TrimSpace(id)
+			if requestedID == "" && len(sessions) > 1 {
+				sort.Slice(sessions, func(i, j int) bool { return sessions[i].ID < sessions[j].ID })
+				if _, err := io.WriteString(out, "Multiple Roblox Studio sessions detected. Select one with /studio <studio_id>:\n"); err != nil {
+					return err
+				}
+				lines := make([]string, 0, len(sessions))
+				for _, studio := range sessions {
+					line := studio.ID
+					if studio.Name != "" {
+						line += " — " + studio.Name
+					}
+					if studio.PlaceID != "" {
+						line += " (place " + studio.PlaceID + ")"
+					}
+					lines = append(lines, line)
+				}
+				_, err = io.WriteString(out, strings.Join(lines, "\n")+"\n")
+				return err
+			}
+			selected, err := roblox.SelectStudio(sessions, requestedID)
 			if err != nil {
 				return err
 			}

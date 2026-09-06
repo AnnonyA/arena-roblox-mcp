@@ -192,6 +192,21 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 		if input.Kind != cli.InputTask {
 			return false, nil
 		}
+		if strings.TrimSpace(cfg.Arena.Model) == "" {
+			models, err := listModels(ctx)
+			if err != nil {
+				return false, err
+			}
+			if _, err := io.WriteString(out, "Select a model with /model <id> before sending a task:\n"); err != nil {
+				return false, err
+			}
+			if len(models) > 0 {
+				if _, err := io.WriteString(out, strings.Join(models, "\n")+"\n"); err != nil {
+					return false, err
+				}
+			}
+			return false, nil
+		}
 		return false, runTask(ctx, input.Task)
 	}
 	return cli.Run(ctx, in, out, cli.NewCommandHandlerWithActions(out, actions, next))

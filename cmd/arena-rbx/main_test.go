@@ -63,3 +63,17 @@ func TestRunWithArgsUsesConfiguredModelWhenFlagMissing(t *testing.T) {
 		t.Fatalf("output missing configured model: %q", got)
 	}
 }
+
+func TestRunWithArgsStatusCommandShowsCurrentStartupStatus(t *testing.T) {
+	in := strings.NewReader("/status\n/exit\n")
+	var out bytes.Buffer
+
+	if err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/status-model"}); err != nil {
+		t.Fatalf("runWithArgs() error = %v", err)
+	}
+
+	got := out.String()
+	if count := strings.Count(got, "Model      arena/status-model\n"); count != 2 {
+		t.Fatalf("status command did not render current status; model line count = %d, output = %q", count, got)
+	}
+}

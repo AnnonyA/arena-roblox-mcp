@@ -94,3 +94,23 @@ func TestRunReturnsToPromptAfterActiveCancellation(t *testing.T) {
 		t.Fatalf("output = %q, want %q", gotOutput, "> > ")
 	}
 }
+
+func TestRunAcceptsLargeBoundedTask(t *testing.T) {
+	task := strings.Repeat("x", 128*1024)
+	in := strings.NewReader(task + "\n/exit\n")
+	var out strings.Builder
+	var got string
+
+	err := Run(context.Background(), in, &out, func(_ context.Context, input Input) (bool, error) {
+		if input.Kind == InputTask {
+			got = input.Task
+		}
+		return input.Kind == InputCommand && input.Command == "exit", nil
+	})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if got != task {
+		t.Fatalf("dispatched task length = %d, want %d", len(got), len(task))
+	}
+}

@@ -125,14 +125,14 @@ func TestRunWithArgsConfigCommandShowsEffectiveNonSecretConfig(t *testing.T) {
 	}
 }
 
-func TestRunWithArgsModelsCommandListsDynamicallyDiscoveredModels(t *testing.T) {
+func TestRunWithArgsModelsCommandListsStableUniqueDiscoveredModels(t *testing.T) {
 	in := strings.NewReader("/models\n/exit\n")
 	var out bytes.Buffer
 	calls := 0
 
 	listModels := func(context.Context) ([]string, error) {
 		calls++
-		return []string{"arena/model-a", "arena/model-b"}, nil
+		return []string{" arena/model-b ", "arena/model-a", "arena/model-b", "", "   "}, nil
 	}
 	if err := runWithArgsAndModels(context.Background(), in, &out, nil, listModels); err != nil {
 		t.Fatalf("runWithArgsAndModels() error = %v", err)
@@ -143,6 +143,9 @@ func TestRunWithArgsModelsCommandListsDynamicallyDiscoveredModels(t *testing.T) 
 	}
 	got := out.String()
 	if !strings.Contains(got, "arena/model-a\narena/model-b\n") {
-		t.Fatalf("models command missing dynamically discovered models: %q", got)
+		t.Fatalf("models command missing stable unique discovered models: %q", got)
+	}
+	if strings.Contains(got, "arena/model-b \n") || strings.Count(got, "arena/model-b\n") != 1 {
+		t.Fatalf("models command did not trim/deduplicate IDs: %q", got)
 	}
 }

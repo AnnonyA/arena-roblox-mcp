@@ -92,6 +92,19 @@ func TestRunWithArgsModelCommandUpdatesCurrentModel(t *testing.T) {
 	}
 }
 
+func TestRunWithArgsModelCommandRejectsEmptyModelAndPreservesSelection(t *testing.T) {
+	in := strings.NewReader("/model\n/status\n/exit\n")
+	var out bytes.Buffer
+
+	err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/old-model"})
+	if err == nil || !strings.Contains(err.Error(), "model ID is required") {
+		t.Fatalf("runWithArgs() error = %v, want model ID required", err)
+	}
+	if got := out.String(); strings.Contains(got, "Model      not selected\n") {
+		t.Fatalf("empty /model cleared existing selection: %q", got)
+	}
+}
+
 func TestRunWithArgsConfigCommandShowsEffectiveNonSecretConfig(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "arena-rbx.json"), []byte(`{"arena":{"apiKeyEnv":"ARENA_TEST_SECRET","model":"arena/config-model"}}`), 0o600); err != nil {

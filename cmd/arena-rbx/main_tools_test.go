@@ -28,3 +28,19 @@ func TestRunWithToolDependenciesToolsCommandListsAvailableMCPTools(t *testing.T)
 		t.Fatalf("tools command missing discovered MCP tools: %q", got)
 	}
 }
+
+func TestRunWithToolDependenciesToolsCommandReportsEmptyRegistry(t *testing.T) {
+	in := strings.NewReader("/tools\n/exit\n")
+	var out bytes.Buffer
+
+	listTools := func(context.Context) ([]string, error) {
+		return nil, nil
+	}
+	if err := runWithToolDependencies(context.Background(), in, &out, nil, nil, listTools, nil); err != nil {
+		t.Fatalf("runWithToolDependencies() error = %v", err)
+	}
+
+	if got := out.String(); !strings.Contains(got, "No MCP tools available.\n") {
+		t.Fatalf("tools command did not report empty registry: %q", got)
+	}
+}

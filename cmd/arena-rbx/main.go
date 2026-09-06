@@ -106,6 +106,7 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 	if err != nil {
 		return fmt.Errorf("create session history: %w", err)
 	}
+	journal := session.NewJournal()
 	conversation := agent.NewContext(conversationCapacity)
 
 	if listModels == nil {
@@ -308,6 +309,13 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 				lines = append(lines, fmt.Sprintf("%s: %s", action.Tool, action.Summary))
 			}
 			return lines, nil
+		},
+		Diff: func(context.Context) (string, error) {
+			diff := journal.Diff()
+			if diff == "" {
+				return "No session changes recorded.\n", nil
+			}
+			return diff, nil
 		},
 		Config: func(context.Context) (string, error) {
 			data, err := json.MarshalIndent(cfg, "", "  ")

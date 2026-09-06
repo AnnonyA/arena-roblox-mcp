@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
 
 func TestRunProvidesUsableHelpAndExitShell(t *testing.T) {
@@ -188,9 +190,12 @@ func TestRunWithDependenciesDispatchesOrdinaryInputAsAgentTask(t *testing.T) {
 	var out bytes.Buffer
 	var tasks []string
 
-	runTask := func(_ context.Context, task string) error {
-		tasks = append(tasks, task)
-		return nil
+	runTask := func(_ context.Context, messages []arena.Message) (string, error) {
+		if len(messages) != 1 {
+			t.Fatalf("messages = %#v, want one current task", messages)
+		}
+		tasks = append(tasks, messages[0].Content)
+		return "", nil
 	}
 	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
 		t.Fatalf("runWithDependencies() error = %v", err)
@@ -205,12 +210,42 @@ func TestRunWithDependenciesHistoryShowsSuccessfulSessionTasks(t *testing.T) {
 	in := strings.NewReader("inspect Workspace scripts\n/history\n/exit\n")
 	var out bytes.Buffer
 
-	runTask := func(context.Context, string) error { return nil }
+	runTask := func(context.Context, []arena.Message) (string, error) { return "", nil }
 	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
 		t.Fatalf("runWithDependencies() error = %v", err)
 	}
 
 	if got := out.String(); !strings.Contains(got, "task: inspect Workspace scripts\n") {
 		t.Fatalf("history command missing successful session task: %q", got)
+	}
+}
+
+func TestRunWithDependenciesClearResetsConversationButKeepsHistory(t *testing.T) {
+	in := strings.NewReader("first task\nsecond task\n/clear\nthird task\n/history\n/exit\n")
+	var out bytes.Buffer
+	var calls [][]arena.Message
+
+	runTask := func(_ context.Context, messages []arena.Message) (string, error) {
+		calls = append(calls, append([]arena.Message(nil), messages...))
+		return "assistant reply", nil
+	}
+	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+
+	if len(calls) != 3 {
+		t.Fatalf("task calls = %d, want 3", len(calls))
+	}
+	if len(calls[1]) != 3 || calls[1][0].Role != "user" || calls[1][0].Content != "first task" || calls[1][1].Role != "assistant" || calls[1][2].Content != "second task" {
+		t.Fatalf("second task conversation = %#v, want prior user/assistant context plus current task", calls[1])
+	}
+	if len(calls[2]) != 1 || calls[2][0].Role != "user" || calls[2][0].Content != "third task" {
+		t.Fatalf("conversation after /clear = %#v, want only current task", calls[2])
+	}
+	got := out.String()
+	for _, task := range []string{"first task", "second task", "third task"} {
+		if !strings.Contains(got, "task: "+task+"\n") {
+			t.Fatalf("history lost %q after /clear: %q", task, got)
+		}
 	}
 }

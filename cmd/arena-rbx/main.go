@@ -119,11 +119,11 @@ func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args
 		Models: listModels,
 		Model: func(_ context.Context, id string) error {
 			modelName := strings.TrimSpace(id)
+			if modelName == "" {
+				return errors.New("model ID is required")
+			}
 			cfg.Arena.Model = modelName
 			status.Model = modelName
-			if status.Model == "" {
-				status.Model = "not selected"
-			}
 			return nil
 		},
 		Config: func(context.Context) (string, error) {

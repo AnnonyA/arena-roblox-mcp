@@ -182,3 +182,21 @@ func TestRunWithArgsModelsCommandListsStableUniqueDiscoveredModels(t *testing.T)
 		t.Fatalf("models command did not trim/deduplicate IDs: %q", got)
 	}
 }
+
+func TestRunWithDependenciesDispatchesOrdinaryInputAsAgentTask(t *testing.T) {
+	in := strings.NewReader("  inspect Workspace scripts  \n/exit\n")
+	var out bytes.Buffer
+	var tasks []string
+
+	runTask := func(_ context.Context, task string) error {
+		tasks = append(tasks, task)
+		return nil
+	}
+	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+
+	if len(tasks) != 1 || tasks[0] != "inspect Workspace scripts" {
+		t.Fatalf("dispatched tasks = %#v, want one trimmed agent task", tasks)
+	}
+}

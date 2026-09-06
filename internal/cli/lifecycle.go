@@ -7,6 +7,8 @@ import (
 	"io"
 )
 
+const maxInputBytes = 1024 * 1024
+
 type InputHandler func(context.Context, Input) (exit bool, err error)
 
 func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler) error {
@@ -24,6 +26,7 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 	}
 
 	scanner := bufio.NewScanner(in)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxInputBytes)
 	for {
 		if err := ctx.Err(); err != nil {
 			return err

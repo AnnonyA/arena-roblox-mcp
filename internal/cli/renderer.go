@@ -18,10 +18,14 @@ func StartupText(status StartupStatus) string {
 }
 
 func StatusText(status StartupStatus) string {
+	mcp := ""
+	if status.MCP != "" {
+		mcp = fmt.Sprintf("MCP        %s\n", status.MCP)
+	}
 	return fmt.Sprintf(
-		"Arena      %s\nMCP        %s\nStudio     %s\nModel      %s\nSession    %s\n",
+		"Arena      %s\n%sStudio     %s\nModel      %s\nSession    %s\n",
 		status.Arena,
-		status.MCP,
+		mcp,
 		status.Studio,
 		status.Model,
 		status.Session,

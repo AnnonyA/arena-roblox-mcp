@@ -65,6 +65,15 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 
 	actions := cli.CommandActions{
 		Status: func() cli.StartupStatus { return status },
+		Model: func(_ context.Context, id string) error {
+			modelName := strings.TrimSpace(id)
+			cfg.Arena.Model = modelName
+			status.Model = modelName
+			if status.Model == "" {
+				status.Model = "not selected"
+			}
+			return nil
+		},
 		Config: func(context.Context) (string, error) {
 			data, err := json.MarshalIndent(cfg, "", "  ")
 			if err != nil {

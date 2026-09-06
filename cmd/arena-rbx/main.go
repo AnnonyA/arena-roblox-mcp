@@ -59,5 +59,8 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 		return err
 	}
 
-	return cli.Run(ctx, in, out, cli.NewCommandHandler(out, nil))
+	actions := cli.CommandActions{
+		Status: func() cli.StartupStatus { return status },
+	}
+	return cli.Run(ctx, in, out, cli.NewCommandHandlerWithActions(out, actions, nil))
 }

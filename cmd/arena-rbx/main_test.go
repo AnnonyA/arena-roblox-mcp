@@ -96,12 +96,16 @@ func TestRunWithArgsModelCommandRejectsEmptyModelAndPreservesSelection(t *testin
 	in := strings.NewReader("/model\n/status\n/exit\n")
 	var out bytes.Buffer
 
-	err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/old-model"})
-	if err == nil || !strings.Contains(err.Error(), "model ID is required") {
-		t.Fatalf("runWithArgs() error = %v, want model ID required", err)
+	if err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/old-model"}); err != nil {
+		t.Fatalf("runWithArgs() error = %v", err)
 	}
-	if got := out.String(); strings.Contains(got, "Model      not selected\n") {
-		t.Fatalf("empty /model cleared existing selection: %q", got)
+
+	got := out.String()
+	if !strings.Contains(got, "Error: model ID is required\n") {
+		t.Fatalf("empty /model did not report actionable error: %q", got)
+	}
+	if count := strings.Count(got, "Model      arena/old-model\n"); count != 2 {
+		t.Fatalf("empty /model did not preserve current selection; model line count = %d, output = %q", count, got)
 	}
 }
 

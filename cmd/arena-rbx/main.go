@@ -11,9 +11,14 @@ import (
 	"os/signal"
 	"strings"
 
+	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/cli"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/config"
 )
+
+const arenaBaseURL = "https://api.preview.arena.ai"
+
+type listModelsFunc func(context.Context) ([]string, error)
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -30,6 +35,10 @@ func run(ctx context.Context, in io.Reader, out io.Writer) error {
 }
 
 func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string) error {
+	return runWithArgsAndModels(ctx, in, out, args, nil)
+}
+
+func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc) error {
 	flags := flag.NewFlagSet("arena-rbx", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	model := flags.String("model", "", "Arena model ID")
@@ -63,8 +72,30 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 		return err
 	}
 
+	if listModels == nil {
+		listModels = func(ctx context.Context) ([]string, error) {
+			apiKey, err := config.ResolveAPIKey(cfg, os.Getenv)
+			if err != nil {
+				return nil, err
+			}
+			client := arena.NewClient(arena.ClientOptions{BaseURL: arenaBaseURL, APIKey: apiKey})
+			models, err := client.ListModels(ctx)
+			if err != nil {
+				return nil, err
+			}
+			ids := make([]string, 0, len(models))
+			for _, model := range models {
+				if id := strings.TrimSpace(model.ID); id != "" {
+					ids = append(ids, id)
+				}
+			}
+			return ids, nil
+		}
+	}
+
 	actions := cli.CommandActions{
 		Status: func() cli.StartupStatus { return status },
+		Models: listModels,
 		Model: func(_ context.Context, id string) error {
 			modelName := strings.TrimSpace(id)
 			cfg.Arena.Model = modelName

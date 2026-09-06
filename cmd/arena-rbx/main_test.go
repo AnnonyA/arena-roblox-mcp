@@ -124,3 +124,25 @@ func TestRunWithArgsConfigCommandShowsEffectiveNonSecretConfig(t *testing.T) {
 		t.Fatalf("config command leaked secret: %q", got)
 	}
 }
+
+func TestRunWithArgsModelsCommandListsDynamicallyDiscoveredModels(t *testing.T) {
+	in := strings.NewReader("/models\n/exit\n")
+	var out bytes.Buffer
+	calls := 0
+
+	listModels := func(context.Context) ([]string, error) {
+		calls++
+		return []string{"arena/model-a", "arena/model-b"}, nil
+	}
+	if err := runWithArgsAndModels(context.Background(), in, &out, nil, listModels); err != nil {
+		t.Fatalf("runWithArgsAndModels() error = %v", err)
+	}
+
+	if calls != 1 {
+		t.Fatalf("model discovery calls = %d, want 1", calls)
+	}
+	got := out.String()
+	if !strings.Contains(got, "arena/model-a\narena/model-b\n") {
+		t.Fatalf("models command missing dynamically discovered models: %q", got)
+	}
+}

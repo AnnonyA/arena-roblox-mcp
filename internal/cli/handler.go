@@ -51,7 +51,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		if input.Kind == InputCommand && input.Command == "tools" && actions.Tools != nil {
 			tools, err := actions.Tools(ctx); if err != nil { return false, err }
 			if out == nil { return false, errors.New("cli: nil output") }
-			if len(tools) == 0 { return false, nil }
+			if len(tools) == 0 { _, err = io.WriteString(out, "No MCP tools available.\n"); return false, err }
 			_, err = io.WriteString(out, strings.Join(tools, "\n")+"\n"); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "history" && actions.History != nil {

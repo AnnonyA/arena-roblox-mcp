@@ -23,3 +23,16 @@ func TestRunProvidesUsableHelpAndExitShell(t *testing.T) {
 		t.Fatalf("output missing help text: %q", got)
 	}
 }
+
+func TestRunWithArgsModelFlagShowsSelectedModel(t *testing.T) {
+	in := strings.NewReader("/exit\n")
+	var out bytes.Buffer
+
+	if err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/test-model"}); err != nil {
+		t.Fatalf("runWithArgs() error = %v", err)
+	}
+
+	if got := out.String(); !strings.Contains(got, "Model      arena/test-model\n") {
+		t.Fatalf("output missing selected model: %q", got)
+	}
+}

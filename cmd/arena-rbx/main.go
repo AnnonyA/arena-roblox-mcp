@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/cli"
+	"github.com/AnnonyA/arena-roblox-mcp/internal/config"
 )
 
 func main() {
@@ -35,9 +36,17 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 		return fmt.Errorf("parse flags: %w", err)
 	}
 
-	modelName := "not selected"
-	if selected := strings.TrimSpace(*model); selected != "" {
-		modelName = selected
+	cfg, err := config.Load("arena-rbx.json")
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	modelName := strings.TrimSpace(*model)
+	if modelName == "" {
+		modelName = strings.TrimSpace(cfg.Arena.Model)
+	}
+	if modelName == "" {
+		modelName = "not selected"
 	}
 	status := cli.StartupStatus{
 		Arena:   "not connected",

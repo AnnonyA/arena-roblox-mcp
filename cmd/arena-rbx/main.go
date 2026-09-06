@@ -16,6 +16,7 @@ import (
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/cli"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/config"
+	"github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/session"
 )
 
@@ -24,6 +25,7 @@ const sessionHistoryCapacity = 100
 const conversationCapacity = 100
 
 type listModelsFunc func(context.Context) ([]string, error)
+type listToolsFunc func(context.Context) ([]string, error)
 type runTaskFunc func(context.Context, []arena.Message) (string, error)
 
 func main() {
@@ -49,6 +51,10 @@ func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args
 }
 
 func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc, runTask runTaskFunc) error {
+	return runWithToolDependencies(ctx, in, out, args, listModels, nil, runTask)
+}
+
+func runWithToolDependencies(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc, listTools listToolsFunc, runTask runTaskFunc) error {
 	flags := flag.NewFlagSet("arena-rbx", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	model := flags.String("model", "", "Arena model ID")
@@ -136,6 +142,48 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 		return models, nil
 	}
 
+	var mcpClient *mcp.Client
+	defer func() {
+		if mcpClient != nil {
+			_ = mcpClient.Close()
+		}
+	}()
+	if listTools == nil {
+		listTools = func(ctx context.Context) ([]string, error) {
+			if mcpClient == nil {
+				server, ok := cfg.MCPServers["Roblox_Studio"]
+				if !ok {
+					return nil, errors.New("Roblox_Studio MCP server is not configured")
+				}
+				client, err := mcp.NewCommandClient(mcp.CommandConfig{Command: server.Command, Args: server.Args})
+				if err != nil {
+					return nil, err
+				}
+				mcpClient = client
+			}
+			tools, err := mcpClient.Tools(ctx)
+			if err != nil {
+				return nil, err
+			}
+			lines := make([]string, 0, len(tools))
+			for _, tool := range tools {
+				name := strings.TrimSpace(tool.Name)
+				if name == "" {
+					continue
+				}
+				description := strings.TrimSpace(tool.Description)
+				if description == "" {
+					lines = append(lines, name)
+					continue
+				}
+				lines = append(lines, name+" — "+description)
+			}
+			sort.Strings(lines)
+			status.Studio = "connected"
+			return lines, nil
+		}
+	}
+
 	if runTask == nil {
 		var chatClient *arena.Client
 		runTask = func(ctx context.Context, messages []arena.Message) (string, error) {
@@ -189,6 +237,7 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 			status.Model = modelName
 			return nil
 		},
+		Tools: listTools,
 		History: func(context.Context) ([]string, error) {
 			actions := history.Actions()
 			lines := make([]string, 0, len(actions))

@@ -190,9 +190,12 @@ func TestRunWithDependenciesDispatchesOrdinaryInputAsAgentTask(t *testing.T) {
 	var out bytes.Buffer
 	var tasks []string
 
-	runTask := func(_ context.Context, task string) error {
-		tasks = append(tasks, task)
-		return nil
+	runTask := func(_ context.Context, messages []arena.Message) (string, error) {
+		if len(messages) != 1 {
+			t.Fatalf("messages = %#v, want one current task", messages)
+		}
+		tasks = append(tasks, messages[0].Content)
+		return "", nil
 	}
 	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
 		t.Fatalf("runWithDependencies() error = %v", err)
@@ -207,7 +210,7 @@ func TestRunWithDependenciesHistoryShowsSuccessfulSessionTasks(t *testing.T) {
 	in := strings.NewReader("inspect Workspace scripts\n/history\n/exit\n")
 	var out bytes.Buffer
 
-	runTask := func(context.Context, string) error { return nil }
+	runTask := func(context.Context, []arena.Message) (string, error) { return "", nil }
 	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
 		t.Fatalf("runWithDependencies() error = %v", err)
 	}

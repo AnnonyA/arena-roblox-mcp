@@ -77,3 +77,36 @@ func TestRunWithArgsStatusCommandShowsCurrentStartupStatus(t *testing.T) {
 		t.Fatalf("status command did not render current status; model line count = %d, output = %q", count, got)
 	}
 }
+
+func TestRunWithArgsConfigCommandShowsEffectiveNonSecretConfig(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "arena-rbx.json"), []byte(`{"arena":{"apiKeyEnv":"ARENA_TEST_SECRET","model":"arena/config-model"}}`), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get cwd: %v", err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldwd) })
+	t.Setenv("ARENA_TEST_SECRET", "super-secret-value")
+
+	in := strings.NewReader("/config\n/exit\n")
+	var out bytes.Buffer
+	if err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/flag-model"}); err != nil {
+		t.Fatalf("runWithArgs() error = %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, `"apiKeyEnv": "ARENA_TEST_SECRET"`) {
+		t.Fatalf("config command missing api key env name: %q", got)
+	}
+	if !strings.Contains(got, `"model": "arena/flag-model"`) {
+		t.Fatalf("config command missing effective model: %q", got)
+	}
+	if strings.Contains(got, "super-secret-value") {
+		t.Fatalf("config command leaked secret: %q", got)
+	}
+}

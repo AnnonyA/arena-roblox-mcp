@@ -15,9 +15,11 @@ import (
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/cli"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/config"
+	"github.com/AnnonyA/arena-roblox-mcp/internal/session"
 )
 
 const arenaBaseURL = "https://api.preview.arena.ai"
+const sessionHistoryCapacity = 100
 
 type listModelsFunc func(context.Context) ([]string, error)
 type runTaskFunc func(context.Context, string) error
@@ -83,6 +85,11 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 	startup := strings.TrimSuffix(cli.StartupText(status), "> ")
 	if _, err := io.WriteString(out, startup); err != nil {
 		return err
+	}
+
+	history, err := session.NewHistory(sessionHistoryCapacity)
+	if err != nil {
+		return fmt.Errorf("create session history: %w", err)
 	}
 
 	if listModels == nil {
@@ -180,6 +187,14 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 			status.Model = modelName
 			return nil
 		},
+		History: func(context.Context) ([]string, error) {
+			actions := history.Actions()
+			lines := make([]string, 0, len(actions))
+			for _, action := range actions {
+				lines = append(lines, fmt.Sprintf("%s: %s", action.Tool, action.Summary))
+			}
+			return lines, nil
+		},
 		Config: func(context.Context) (string, error) {
 			data, err := json.MarshalIndent(cfg, "", "  ")
 			if err != nil {
@@ -207,7 +222,11 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 			}
 			return false, nil
 		}
-		return false, runTask(ctx, input.Task)
+		if err := runTask(ctx, input.Task); err != nil {
+			return false, err
+		}
+		history.Add(session.Action{Tool: "task", Summary: input.Task})
+		return false, nil
 	}
 	return cli.Run(ctx, in, out, cli.NewCommandHandlerWithActions(out, actions, next))
 }

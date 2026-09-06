@@ -17,6 +17,7 @@ import (
 	"github.com/AnnonyA/arena-roblox-mcp/internal/cli"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/config"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
+	"github.com/AnnonyA/arena-roblox-mcp/internal/roblox"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/session"
 )
 
@@ -26,6 +27,7 @@ const conversationCapacity = 100
 
 type listModelsFunc func(context.Context) ([]string, error)
 type listToolsFunc func(context.Context) ([]string, error)
+type listStudiosFunc func(context.Context) ([]roblox.StudioSession, error)
 type runTaskFunc func(context.Context, []arena.Message) (string, error)
 
 func main() {
@@ -55,6 +57,10 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 }
 
 func runWithToolDependencies(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc, listTools listToolsFunc, runTask runTaskFunc) error {
+	return runWithStudioDependencies(ctx, in, out, args, listModels, listTools, runTask, nil)
+}
+
+func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc, listTools listToolsFunc, runTask runTaskFunc, listStudios listStudiosFunc) error {
 	flags := flag.NewFlagSet("arena-rbx", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	model := flags.String("model", "", "Arena model ID")
@@ -148,20 +154,28 @@ func runWithToolDependencies(ctx context.Context, in io.Reader, out io.Writer, a
 			_ = mcpClient.Close()
 		}
 	}()
+	newMCPClient := func() (*mcp.Client, error) {
+		if mcpClient != nil {
+			return mcpClient, nil
+		}
+		server, ok := cfg.MCPServers["Roblox_Studio"]
+		if !ok {
+			return nil, errors.New("Roblox_Studio MCP server is not configured")
+		}
+		client, err := mcp.NewCommandClient(mcp.CommandConfig{Command: server.Command, Args: server.Args})
+		if err != nil {
+			return nil, err
+		}
+		mcpClient = client
+		return mcpClient, nil
+	}
 	if listTools == nil {
 		listTools = func(ctx context.Context) ([]string, error) {
-			if mcpClient == nil {
-				server, ok := cfg.MCPServers["Roblox_Studio"]
-				if !ok {
-					return nil, errors.New("Roblox_Studio MCP server is not configured")
-				}
-				client, err := mcp.NewCommandClient(mcp.CommandConfig{Command: server.Command, Args: server.Args})
-				if err != nil {
-					return nil, err
-				}
-				mcpClient = client
+			client, err := newMCPClient()
+			if err != nil {
+				return nil, err
 			}
-			tools, err := mcpClient.Tools(ctx)
+			tools, err := client.Tools(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -181,6 +195,15 @@ func runWithToolDependencies(ctx context.Context, in io.Reader, out io.Writer, a
 			sort.Strings(lines)
 			status.Studio = "connected"
 			return lines, nil
+		}
+	}
+	if listStudios == nil {
+		listStudios = func(ctx context.Context) ([]roblox.StudioSession, error) {
+			client, err := newMCPClient()
+			if err != nil {
+				return nil, err
+			}
+			return roblox.DiscoverStudioSessions(ctx, client)
 		}
 	}
 
@@ -235,6 +258,18 @@ func runWithToolDependencies(ctx context.Context, in io.Reader, out io.Writer, a
 			}
 			cfg.Arena.Model = modelName
 			status.Model = modelName
+			return nil
+		},
+		Studio: func(ctx context.Context, id string) error {
+			sessions, err := listStudios(ctx)
+			if err != nil {
+				return err
+			}
+			selected, err := roblox.SelectStudio(sessions, strings.TrimSpace(id))
+			if err != nil {
+				return err
+			}
+			status.Studio = selected.ID
 			return nil
 		},
 		Tools: listTools,

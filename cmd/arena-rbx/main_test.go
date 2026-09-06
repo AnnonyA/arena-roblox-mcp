@@ -200,3 +200,17 @@ func TestRunWithDependenciesDispatchesOrdinaryInputAsAgentTask(t *testing.T) {
 		t.Fatalf("dispatched tasks = %#v, want one trimmed agent task", tasks)
 	}
 }
+
+func TestRunWithDependenciesHistoryShowsSuccessfulSessionTasks(t *testing.T) {
+	in := strings.NewReader("inspect Workspace scripts\n/history\n/exit\n")
+	var out bytes.Buffer
+
+	runTask := func(context.Context, string) error { return nil }
+	if err := runWithDependencies(context.Background(), in, &out, []string{"--model", "arena/test-model"}, nil, runTask); err != nil {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+
+	if got := out.String(); !strings.Contains(got, "task: inspect Workspace scripts\n") {
+		t.Fatalf("history command missing successful session task: %q", got)
+	}
+}

@@ -57,7 +57,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		if input.Kind == InputCommand && input.Command == "history" && actions.History != nil {
 			history, err := actions.History(ctx); if err != nil { return false, err }
 			if out == nil { return false, errors.New("cli: nil output") }
-			if len(history) == 0 { return false, nil }
+			if len(history) == 0 { _, err = io.WriteString(out, "No session history recorded.\n"); return false, err }
 			_, err = io.WriteString(out, strings.Join(history, "\n")+"\n"); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "diff" && actions.Diff != nil {

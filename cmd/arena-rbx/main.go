@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AnnonyA/arena-roblox-mcp/internal/agent"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/cli"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/config"
@@ -20,9 +21,10 @@ import (
 
 const arenaBaseURL = "https://api.preview.arena.ai"
 const sessionHistoryCapacity = 100
+const conversationCapacity = 100
 
 type listModelsFunc func(context.Context) ([]string, error)
-type runTaskFunc func(context.Context, string) error
+type runTaskFunc func(context.Context, []arena.Message) (string, error)
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -91,6 +93,7 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 	if err != nil {
 		return fmt.Errorf("create session history: %w", err)
 	}
+	conversation := agent.NewContext(conversationCapacity)
 
 	if listModels == nil {
 		listModels = func(ctx context.Context) ([]string, error) {
@@ -108,7 +111,6 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 				if id := strings.TrimSpace(model.ID); id != "" {
 					ids = append(ids, id)
 				}
-			}
 			return ids, nil
 		}
 	}
@@ -135,26 +137,23 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 
 	if runTask == nil {
 		var chatClient *arena.Client
-		runTask = func(ctx context.Context, task string) error {
+		runTask = func(ctx context.Context, messages []arena.Message) (string, error) {
 			modelID := strings.TrimSpace(cfg.Arena.Model)
 			if modelID == "" {
-				return errors.New("model not selected; use /model <id>")
+				return "", errors.New("model not selected; use /model <id>")
 			}
 			if chatClient == nil {
 				apiKey, err := config.ResolveAPIKey(cfg, os.Getenv)
 				if err != nil {
-					return err
+					return "", err
 				}
 				chatClient = arena.NewClient(arena.ClientOptions{BaseURL: arenaBaseURL, APIKey: apiKey})
 			}
 
 			var writeErr error
 			result, err := chatClient.StreamChat(ctx, arena.ChatRequest{
-				Model: modelID,
-				Messages: []arena.Message{{
-					Role:    "user",
-					Content: task,
-				}},
+				Model:    modelID,
+				Messages: messages,
 			}, func(delta string) {
 				if writeErr != nil {
 					return
@@ -162,20 +161,22 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 				_, writeErr = io.WriteString(out, delta)
 			})
 			if err != nil {
-				return err
+				return "", err
 			}
 			if writeErr != nil {
-				return writeErr
+				return "", writeErr
 			}
 			if result.Text != "" && !strings.HasSuffix(result.Text, "\n") {
-				_, err = io.WriteString(out, "\n")
-				return err
+				if _, err = io.WriteString(out, "\n"); err != nil {
+					return "", err
+				}
 			}
-			return nil
+			return result.Text, nil
 		}
 	}
 
 	actions := cli.CommandActions{
+		Clear: conversation.Clear,
 		Status: func() cli.StartupStatus { return status },
 		Models: listModels,
 		Model: func(_ context.Context, id string) error {
@@ -222,8 +223,21 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 			}
 			return false, nil
 		}
-		if err := runTask(ctx, input.Task); err != nil {
+
+		events := conversation.Events()
+		messages := make([]arena.Message, 0, len(events)+1)
+		for _, event := range events {
+			messages = append(messages, arena.Message{Role: event.Role, Content: event.Content})
+		}
+		messages = append(messages, arena.Message{Role: "user", Content: input.Task})
+
+		assistantReply, err := runTask(ctx, messages)
+		if err != nil {
 			return false, err
+		}
+		conversation.Add(agent.Event{Role: "user", Content: input.Task})
+		if assistantReply != "" {
+			conversation.Add(agent.Event{Role: "assistant", Content: assistantReply})
 		}
 		history.Add(session.Action{Tool: "task", Summary: input.Task})
 		return false, nil

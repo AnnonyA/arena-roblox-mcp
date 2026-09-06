@@ -20,6 +20,7 @@ import (
 const arenaBaseURL = "https://api.preview.arena.ai"
 
 type listModelsFunc func(context.Context) ([]string, error)
+type runTaskFunc func(context.Context, string) error
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -40,6 +41,10 @@ func runWithArgs(ctx context.Context, in io.Reader, out io.Writer, args []string
 }
 
 func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc) error {
+	return runWithDependencies(ctx, in, out, args, listModels, nil)
+}
+
+func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args []string, listModels listModelsFunc, runTask runTaskFunc) error {
 	flags := flag.NewFlagSet("arena-rbx", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	model := flags.String("model", "", "Arena model ID")
@@ -121,6 +126,48 @@ func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args
 		return models, nil
 	}
 
+	if runTask == nil {
+		var chatClient *arena.Client
+		runTask = func(ctx context.Context, task string) error {
+			modelID := strings.TrimSpace(cfg.Arena.Model)
+			if modelID == "" {
+				return errors.New("model not selected; use /model <id>")
+			}
+			if chatClient == nil {
+				apiKey, err := config.ResolveAPIKey(cfg, os.Getenv)
+				if err != nil {
+					return err
+				}
+				chatClient = arena.NewClient(arena.ClientOptions{BaseURL: arenaBaseURL, APIKey: apiKey})
+			}
+
+			var writeErr error
+			result, err := chatClient.StreamChat(ctx, arena.ChatRequest{
+				Model: modelID,
+				Messages: []arena.Message{{
+					Role:    "user",
+					Content: task,
+				}},
+			}, func(delta string) {
+				if writeErr != nil {
+					return
+				}
+				_, writeErr = io.WriteString(out, delta)
+			})
+			if err != nil {
+				return err
+			}
+			if writeErr != nil {
+				return writeErr
+			}
+			if result.Text != "" && !strings.HasSuffix(result.Text, "\n") {
+				_, err = io.WriteString(out, "\n")
+				return err
+			}
+			return nil
+		}
+	}
+
 	actions := cli.CommandActions{
 		Status: func() cli.StartupStatus { return status },
 		Models: listModels,
@@ -141,5 +188,11 @@ func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args
 			return string(data) + "\n", nil
 		},
 	}
-	return cli.Run(ctx, in, out, cli.NewCommandHandlerWithActions(out, actions, nil))
+	next := func(ctx context.Context, input cli.Input) (bool, error) {
+		if input.Kind != cli.InputTask {
+			return false, nil
+		}
+		return false, runTask(ctx, input.Task)
+	}
+	return cli.Run(ctx, in, out, cli.NewCommandHandlerWithActions(out, actions, next))
 }

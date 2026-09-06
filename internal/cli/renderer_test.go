@@ -5,6 +5,7 @@ import "testing"
 func TestStartupTextShowsConnectionStateAndPrompt(t *testing.T) {
 	got := StartupText(StartupStatus{
 		Arena:   "connected",
+		MCP:     "connected",
 		Studio:  "connected",
 		Model:   "arena-code",
 		Session: "default",
@@ -12,6 +13,7 @@ func TestStartupTextShowsConnectionStateAndPrompt(t *testing.T) {
 	want := "Arena Roblox MCP\n" +
 		"────────────────────────────\n" +
 		"Arena      connected\n" +
+		"MCP        connected\n" +
 		"Studio     connected\n" +
 		"Model      arena-code\n" +
 		"Session    default\n\n" +

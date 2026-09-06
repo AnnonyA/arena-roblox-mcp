@@ -26,6 +26,22 @@ func TestRunProvidesUsableHelpAndExitShell(t *testing.T) {
 	}
 }
 
+func TestRunWithArgsHelpFlagPrintsHelpWithoutStartingShell(t *testing.T) {
+	var out bytes.Buffer
+
+	if err := runWithArgs(context.Background(), strings.NewReader(""), &out, []string{"--help"}); err != nil {
+		t.Fatalf("runWithArgs() error = %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "/help  show commands\n") {
+		t.Fatalf("help flag missing command help: %q", got)
+	}
+	if strings.Contains(got, "Arena Roblox MCP\n") {
+		t.Fatalf("help flag unexpectedly started interactive shell: %q", got)
+	}
+}
+
 func TestRunWithArgsModelFlagShowsSelectedModel(t *testing.T) {
 	in := strings.NewReader("/exit\n")
 	var out bytes.Buffer

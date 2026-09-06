@@ -44,6 +44,13 @@ func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args
 	flags.SetOutput(io.Discard)
 	model := flags.String("model", "", "Arena model ID")
 	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			if out == nil {
+				return errors.New("cli: nil output")
+			}
+			_, writeErr := io.WriteString(out, cli.HelpText())
+			return writeErr
+		}
 		return fmt.Errorf("parse flags: %w", err)
 	}
 

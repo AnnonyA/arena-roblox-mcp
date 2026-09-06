@@ -5,6 +5,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
 
 func TestRunWithDependenciesPromptsForModelBeforeFirstTask(t *testing.T) {
@@ -17,9 +19,12 @@ func TestRunWithDependenciesPromptsForModelBeforeFirstTask(t *testing.T) {
 		modelCalls++
 		return []string{"arena/model-b", "arena/model-a"}, nil
 	}
-	runTask := func(_ context.Context, task string) error {
-		tasks = append(tasks, task)
-		return nil
+	runTask := func(_ context.Context, messages []arena.Message) (string, error) {
+		if len(messages) != 1 {
+			t.Fatalf("messages = %#v, want one current task", messages)
+		}
+		tasks = append(tasks, messages[0].Content)
+		return "", nil
 	}
 
 	if err := runWithDependencies(context.Background(), in, &out, nil, listModels, runTask); err != nil {

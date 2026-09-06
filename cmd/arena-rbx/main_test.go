@@ -78,6 +78,20 @@ func TestRunWithArgsStatusCommandShowsCurrentStartupStatus(t *testing.T) {
 	}
 }
 
+func TestRunWithArgsModelCommandUpdatesCurrentModel(t *testing.T) {
+	in := strings.NewReader("/model arena/new-model\n/status\n/exit\n")
+	var out bytes.Buffer
+
+	if err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/old-model"}); err != nil {
+		t.Fatalf("runWithArgs() error = %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "Model      arena/new-model\n") {
+		t.Fatalf("status command did not reflect /model selection: %q", got)
+	}
+}
+
 func TestRunWithArgsConfigCommandShowsEffectiveNonSecretConfig(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "arena-rbx.json"), []byte(`{"arena":{"apiKeyEnv":"ARENA_TEST_SECRET","model":"arena/config-model"}}`), 0o600); err != nil {

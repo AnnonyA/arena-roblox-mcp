@@ -111,6 +111,7 @@ func runWithDependencies(ctx context.Context, in io.Reader, out io.Writer, args 
 				if id := strings.TrimSpace(model.ID); id != "" {
 					ids = append(ids, id)
 				}
+			}
 			return ids, nil
 		}
 	}

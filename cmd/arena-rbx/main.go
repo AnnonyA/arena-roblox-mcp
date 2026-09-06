@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
@@ -91,6 +92,26 @@ func runWithArgsAndModels(ctx context.Context, in io.Reader, out io.Writer, args
 			}
 			return ids, nil
 		}
+	}
+
+	baseListModels := listModels
+	listModels = func(ctx context.Context) ([]string, error) {
+		models, err := baseListModels(ctx)
+		if err != nil {
+			return nil, err
+		}
+		unique := make(map[string]struct{}, len(models))
+		for _, model := range models {
+			if id := strings.TrimSpace(model); id != "" {
+				unique[id] = struct{}{}
+			}
+		}
+		models = models[:0]
+		for id := range unique {
+			models = append(models, id)
+		}
+		sort.Strings(models)
+		return models, nil
 	}
 
 	actions := cli.CommandActions{

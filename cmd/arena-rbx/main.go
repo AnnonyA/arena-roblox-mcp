@@ -92,6 +92,7 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 	}
 	status := cli.StartupStatus{
 		Arena:   "not connected",
+		MCP:     "not connected",
 		Studio:  "not connected",
 		Model:   displayModel,
 		Session: "default",
@@ -193,7 +194,6 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 				lines = append(lines, name+" — "+description)
 			}
 			sort.Strings(lines)
-			status.Studio = "connected"
 			return lines, nil
 		}
 	}
@@ -265,6 +265,7 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			if err != nil {
 				return err
 			}
+			status.MCP = "connected"
 			requestedID := strings.TrimSpace(id)
 			if requestedID == "" && len(sessions) > 1 {
 				sort.Slice(sessions, func(i, j int) bool { return sessions[i].ID < sessions[j].ID })
@@ -292,7 +293,14 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			status.Studio = selected.ID
 			return nil
 		},
-		Tools: listTools,
+		Tools: func(ctx context.Context) ([]string, error) {
+			tools, err := listTools(ctx)
+			if err != nil {
+				return nil, err
+			}
+			status.MCP = "connected"
+			return tools, nil
+		},
 		History: func(context.Context) ([]string, error) {
 			actions := history.Actions()
 			lines := make([]string, 0, len(actions))

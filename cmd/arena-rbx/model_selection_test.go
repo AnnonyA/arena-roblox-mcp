@@ -31,8 +31,8 @@ func TestRunWithDependenciesPromptsForModelBeforeFirstTask(t *testing.T) {
 		t.Fatalf("runWithDependencies() error = %v", err)
 	}
 
-	if modelCalls != 1 {
-		t.Fatalf("model discovery calls = %d, want 1", modelCalls)
+	if modelCalls != 2 {
+		t.Fatalf("model discovery calls = %d, want 2", modelCalls)
 	}
 	if len(tasks) != 1 || tasks[0] != "inspect Workspace again" {
 		t.Fatalf("dispatched tasks = %#v, want only task after model selection", tasks)
@@ -43,5 +43,30 @@ func TestRunWithDependenciesPromptsForModelBeforeFirstTask(t *testing.T) {
 	}
 	if !strings.Contains(got, "arena/model-a\narena/model-b\n") {
 		t.Fatalf("prompt missing discovered models: %q", got)
+	}
+}
+
+func TestRunWithDependenciesRejectsUnknownModelAndKeepsCLIUsable(t *testing.T) {
+	in := strings.NewReader("/model arena/missing\ninspect Workspace\n/model arena/model-a\ninspect Workspace again\n/exit\n")
+	var out bytes.Buffer
+	var tasks []string
+
+	listModels := func(context.Context) ([]string, error) {
+		return []string{"arena/model-b", "arena/model-a"}, nil
+	}
+	runTask := func(_ context.Context, messages []arena.Message) (string, error) {
+		tasks = append(tasks, messages[len(messages)-1].Content)
+		return "", nil
+	}
+
+	if err := runWithDependencies(context.Background(), in, &out, nil, listModels, runTask); err != nil {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+
+	if len(tasks) != 1 || tasks[0] != "inspect Workspace again" {
+		t.Fatalf("dispatched tasks = %#v, want only task after valid model selection", tasks)
+	}
+	if got := out.String(); !strings.Contains(got, "Error: Arena model not found: arena/missing\n") {
+		t.Fatalf("missing unknown-model error: %q", got)
 	}
 }

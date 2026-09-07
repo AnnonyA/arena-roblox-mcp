@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -36,12 +35,10 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 			break
 		}
 		if attempt == 2 || !retryableStatus(resp.StatusCode) {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
+			drainAndClose(resp.Body)
 			return nil, arenaStatusError("models", resp.StatusCode)
 		}
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
+		drainAndClose(resp.Body)
 		if err := waitRetry(ctx, resp.Header.Get("Retry-After")); err != nil {
 			return nil, fmt.Errorf("wait to retry Arena models: %w", err)
 		}

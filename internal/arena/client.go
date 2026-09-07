@@ -2,10 +2,13 @@ package arena
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 )
+
+const maxErrorBodyDrain = 64 * 1024
 
 type ClientOptions struct {
 	BaseURL    string
@@ -35,4 +38,9 @@ func arenaStatusError(operation string, status int) error {
 		return fmt.Errorf("Arena rate limit exceeded. Try again later.")
 	}
 	return fmt.Errorf("Arena %s request failed with HTTP %d", operation, status)
+}
+
+func drainAndClose(body io.ReadCloser) {
+	_, _ = io.CopyN(io.Discard, body, maxErrorBodyDrain)
+	_ = body.Close()
 }

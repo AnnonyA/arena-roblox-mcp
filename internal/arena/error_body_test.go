@@ -9,9 +9,10 @@ import (
 )
 
 type trackingBody struct {
-	reader *strings.Reader
-	eof    bool
-	closed bool
+	reader    *strings.Reader
+	eof       bool
+	closed    bool
+	bytesRead int
 }
 
 func newTrackingBody(content string) *trackingBody {
@@ -20,6 +21,7 @@ func newTrackingBody(content string) *trackingBody {
 
 func (b *trackingBody) Read(p []byte) (int, error) {
 	n, err := b.reader.Read(p)
+	b.bytesRead += n
 	if err == io.EOF {
 		b.eof = true
 	}
@@ -55,6 +57,28 @@ func TestListModelsDrainsTerminalErrorBody(t *testing.T) {
 	}
 	if !body.closed {
 		t.Fatal("ListModels did not close terminal error body")
+	}
+}
+
+func TestListModelsBoundsTerminalErrorBodyDrain(t *testing.T) {
+	const maxExpectedDrain = 64 * 1024
+	body := newTrackingBody(strings.Repeat("x", maxExpectedDrain*4))
+	client := NewClient(ClientOptions{
+		BaseURL: "https://arena.invalid",
+		HTTPClient: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusUnauthorized, Body: body, Header: make(http.Header)}, nil
+		})},
+	})
+
+	_, err := client.ListModels(context.Background())
+	if err == nil {
+		t.Fatal("ListModels error = nil, want authentication error")
+	}
+	if body.bytesRead > maxExpectedDrain {
+		t.Fatalf("ListModels drained %d bytes from oversized error body, want at most %d", body.bytesRead, maxExpectedDrain)
+	}
+	if !body.closed {
+		t.Fatal("ListModels did not close oversized terminal error body")
 	}
 }
 

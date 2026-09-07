@@ -55,6 +55,15 @@ func TestRetryAfterDelayBoundsFarFutureHTTPDate(t *testing.T) {
 	}
 }
 
+func TestRetryAfterDelayBoundsLargeNumericDelay(t *testing.T) {
+	t.Parallel()
+
+	got := retryAfterDelay("3600", time.Unix(0, 0))
+	if got != time.Minute {
+		t.Fatalf("retry delay = %v, want maximum %v for large numeric Retry-After", got, time.Minute)
+	}
+}
+
 func TestRetryAfterDelayFallsBackOnDurationOverflow(t *testing.T) {
 	t.Parallel()
 

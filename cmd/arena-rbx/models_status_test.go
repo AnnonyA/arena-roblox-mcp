@@ -23,3 +23,20 @@ func TestRunWithArgsAndModelsStatusShowsArenaConnectedAfterModelDiscovery(t *tes
 		t.Fatalf("status did not reflect successful Arena model discovery: %q", got)
 	}
 }
+
+func TestRunWithArgsAndModelsStatusShowsArenaConnectedAfterModelSelection(t *testing.T) {
+	in := strings.NewReader("/model arena/new-model\n/status\n/exit\n")
+	var out bytes.Buffer
+
+	listModels := func(context.Context) ([]string, error) {
+		return []string{"arena/new-model"}, nil
+	}
+	if err := runWithArgsAndModels(context.Background(), in, &out, nil, listModels); err != nil {
+		t.Fatalf("runWithArgsAndModels() error = %v", err)
+	}
+
+	got := out.String()
+	if !strings.Contains(got, "Arena      connected\n") {
+		t.Fatalf("status did not reflect successful Arena model selection: %q", got)
+	}
+}

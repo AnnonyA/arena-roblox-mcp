@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -76,12 +75,10 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 			break
 		}
 		if attempt == 2 || !retryableStatus(resp.StatusCode) {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
+			drainAndClose(resp.Body)
 			return ChatResult{}, arenaStatusError("chat", resp.StatusCode)
 		}
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
+		drainAndClose(resp.Body)
 		if err := waitRetry(ctx, resp.Header.Get("Retry-After")); err != nil {
 			return ChatResult{}, fmt.Errorf("wait to retry Arena chat: %w", err)
 		}

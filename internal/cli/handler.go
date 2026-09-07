@@ -29,6 +29,7 @@ func NewCommandHandlerWithClear(out io.Writer, clear func(), next InputHandler) 
 }
 
 func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next InputHandler) InputHandler {
+	arenaConnected := false
 	return func(ctx context.Context, input Input) (bool, error) {
 		if input.Kind == InputCommand && input.Command == "help" {
 			if out == nil { return false, errors.New("cli: nil output") }
@@ -38,10 +39,13 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		if input.Kind == InputCommand && input.Command == "clear" && actions.Clear != nil { actions.Clear(); return false, nil }
 		if input.Kind == InputCommand && input.Command == "status" && actions.Status != nil {
 			if out == nil { return false, errors.New("cli: nil output") }
-			_, err := io.WriteString(out, StatusText(actions.Status())); return false, err
+			status := actions.Status()
+			if arenaConnected { status.Arena = "connected" }
+			_, err := io.WriteString(out, StatusText(status)); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "models" && actions.Models != nil {
 			models, err := actions.Models(ctx); if err != nil { return false, err }
+			arenaConnected = true
 			if out == nil { return false, errors.New("cli: nil output") }
 			if len(models) == 0 { _, err = io.WriteString(out, "No Arena models available.\n"); return false, err }
 			_, err = io.WriteString(out, strings.Join(models, "\n")+"\n"); return false, err
@@ -52,12 +56,17 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 				if actions.Model != nil { return false, actions.Model(ctx, input.Argument) }
 				return false, err
 			}
+			arenaConnected = true
 			if out == nil { return false, errors.New("cli: nil output") }
 			if _, err = io.WriteString(out, "Select a model with /model <id>:\n"); err != nil { return false, err }
 			if len(models) == 0 { _, err = io.WriteString(out, "No Arena models available.\n"); return false, err }
 			_, err = io.WriteString(out, strings.Join(models, "\n")+"\n"); return false, err
 		}
-		if input.Kind == InputCommand && input.Command == "model" && actions.Model != nil { return false, actions.Model(ctx, input.Argument) }
+		if input.Kind == InputCommand && input.Command == "model" && actions.Model != nil {
+			err := actions.Model(ctx, input.Argument)
+			if err == nil { arenaConnected = true }
+			return false, err
+		}
 		if input.Kind == InputCommand && input.Command == "studio" && actions.Studio != nil { return false, actions.Studio(ctx, input.Argument) }
 		if input.Kind == InputCommand && input.Command == "tools" && actions.Tools != nil {
 			tools, err := actions.Tools(ctx); if err != nil { return false, err }

@@ -352,11 +352,11 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			if err != nil {
 				return false, err
 			}
-			if _, err := io.WriteString(out, "Select a model with /model <id> before sending a task:\n"); err != nil {
-				return false, err
-			}
 			if len(models) == 0 {
 				_, err := io.WriteString(out, "No Arena models available.\n")
+				return false, err
+			}
+			if _, err := io.WriteString(out, "Select a model with /model <id> before sending a task:\n"); err != nil {
 				return false, err
 			}
 			if _, err := io.WriteString(out, strings.Join(models, "\n")+"\n"); err != nil {

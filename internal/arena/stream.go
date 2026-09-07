@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const defaultRetryDelay = 200 * time.Millisecond
+
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content,omitempty"`
@@ -151,9 +153,6 @@ func retryableStatus(status int) bool {
 
 func waitRetry(ctx context.Context, retryAfter string) error {
 	delay := retryAfterDelay(retryAfter, time.Now())
-	if delay <= 0 {
-		return nil
-	}
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 	select {
@@ -171,5 +170,5 @@ func retryAfterDelay(value string, now time.Time) time.Duration {
 	if at, err := http.ParseTime(value); err == nil && at.After(now) {
 		return at.Sub(now)
 	}
-	return 0
+	return defaultRetryDelay
 }

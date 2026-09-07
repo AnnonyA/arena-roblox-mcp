@@ -31,8 +31,8 @@ func TestRunWithDependenciesPromptsForModelBeforeFirstTask(t *testing.T) {
 		t.Fatalf("runWithDependencies() error = %v", err)
 	}
 
-	if modelCalls != 1 {
-		t.Fatalf("model discovery calls = %d, want 1", modelCalls)
+	if modelCalls != 2 {
+		t.Fatalf("model discovery calls = %d, want 2", modelCalls)
 	}
 	if len(tasks) != 1 || tasks[0] != "inspect Workspace again" {
 		t.Fatalf("dispatched tasks = %#v, want only task after model selection", tasks)

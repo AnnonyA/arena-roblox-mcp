@@ -53,3 +53,16 @@ func TestRunToolLoopPropagatesCancellation(t *testing.T) {
 		t.Fatalf("round calls = %d, want 0", calls)
 	}
 }
+
+func TestRunToolLoopPropagatesCancellationDuringRound(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	err := RunToolLoop(ctx, DefaultMaxToolRounds, func(context.Context) (bool, error) {
+		cancel()
+		return false, nil
+	})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("RunToolLoop error = %v, want context canceled", err)
+	}
+}

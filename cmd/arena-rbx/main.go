@@ -141,6 +141,7 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			if id := strings.TrimSpace(model); id != "" {
 				unique[id] = struct{}{}
 			}
+		}
 		models = models[:0]
 		for id := range unique {
 			models = append(models, id)

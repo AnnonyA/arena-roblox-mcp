@@ -31,5 +31,8 @@ func arenaStatusError(operation string, status int) error {
 	if status == http.StatusUnauthorized {
 		return fmt.Errorf("Arena authentication failed. Check your API key.")
 	}
+	if status == http.StatusTooManyRequests {
+		return fmt.Errorf("Arena rate limit exceeded. Try again later.")
+	}
 	return fmt.Errorf("Arena %s request failed with HTTP %d", operation, status)
 }

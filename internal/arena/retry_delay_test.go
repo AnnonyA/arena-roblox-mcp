@@ -43,3 +43,22 @@ func TestRetryAfterDelayRespectsPastHTTPDate(t *testing.T) {
 		t.Fatalf("retry delay = %v, want 0 for past Retry-After HTTP-date", got)
 	}
 }
+
+func TestRetryableStatusOnlyAccepts429And5xx(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		status int
+		want   bool
+	}{
+		{status: http.StatusTooManyRequests, want: true},
+		{status: http.StatusInternalServerError, want: true},
+		{status: 599, want: true},
+		{status: 600, want: false},
+		{status: 700, want: false},
+	} {
+		if got := retryableStatus(tc.status); got != tc.want {
+			t.Fatalf("retryableStatus(%d) = %v, want %v", tc.status, got, tc.want)
+		}
+	}
+}

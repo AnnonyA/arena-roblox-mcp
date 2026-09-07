@@ -164,7 +164,10 @@ func waitRetry(ctx context.Context, retryAfter string) error {
 }
 
 func retryAfterDelay(value string, now time.Time) time.Duration {
-	if seconds, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && seconds >= 0 {
+	if seconds, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64); err == nil && seconds >= 0 {
+		if seconds > int64((time.Duration(1<<63-1))/time.Second) {
+			return defaultRetryDelay
+		}
 		return time.Duration(seconds) * time.Second
 	}
 	if at, err := http.ParseTime(value); err == nil {

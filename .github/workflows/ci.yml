@@ -25,6 +25,8 @@ jobs:
         run: go vet ./...
       - name: Race
         run: go test -race ./...
+      - name: Benchmarks
+        run: go test ./... -run '^$' -bench 'Benchmark(CLIStartup|ToolRegistry|ContextProcessing|StreamParser)$' -benchtime=1x
 
   windows-build:
     runs-on: windows-latest

@@ -44,6 +44,17 @@ func TestRetryAfterDelayRespectsPastHTTPDate(t *testing.T) {
 	}
 }
 
+func TestRetryAfterDelayBoundsFarFutureHTTPDate(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.September, 7, 18, 0, 0, 0, time.UTC)
+	future := now.Add(24 * time.Hour).Format(http.TimeFormat)
+	got := retryAfterDelay(future, now)
+	if got != time.Minute {
+		t.Fatalf("retry delay = %v, want maximum %v for far-future Retry-After HTTP-date", got, time.Minute)
+	}
+}
+
 func TestRetryAfterDelayFallsBackOnDurationOverflow(t *testing.T) {
 	t.Parallel()
 

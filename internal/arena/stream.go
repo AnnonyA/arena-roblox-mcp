@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-const defaultRetryDelay = 200 * time.Millisecond
+const (
+	defaultRetryDelay = 200 * time.Millisecond
+	maxRetryDelay     = time.Minute
+)
 
 type Message struct {
 	Role    string `json:"role"`
@@ -166,13 +169,21 @@ func retryAfterDelay(value string, now time.Time) time.Duration {
 		if seconds > int64((time.Duration(1<<63-1))/time.Second) {
 			return defaultRetryDelay
 		}
-		return time.Duration(seconds) * time.Second
+		delay := time.Duration(seconds) * time.Second
+		if delay > maxRetryDelay {
+			return maxRetryDelay
+		}
+		return delay
 	}
 	if at, err := http.ParseTime(value); err == nil {
 		if !at.After(now) {
 			return 0
 		}
-		return at.Sub(now)
+		delay := at.Sub(now)
+		if delay > maxRetryDelay {
+			return maxRetryDelay
+		}
+		return delay
 	}
 	return defaultRetryDelay
 }

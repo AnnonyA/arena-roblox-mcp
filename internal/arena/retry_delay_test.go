@@ -44,6 +44,17 @@ func TestRetryAfterDelayRespectsPastHTTPDate(t *testing.T) {
 	}
 }
 
+func TestRetryAfterDelayTrimsHTTPDateWhitespace(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.September, 7, 18, 0, 0, 0, time.UTC)
+	future := now.Add(5 * time.Second).Format(http.TimeFormat)
+	got := retryAfterDelay(" \t"+future+"\t ", now)
+	if got != 5*time.Second {
+		t.Fatalf("retry delay = %v, want %v for whitespace-padded Retry-After HTTP-date", got, 5*time.Second)
+	}
+}
+
 func TestRetryAfterDelayBoundsFarFutureHTTPDate(t *testing.T) {
 	t.Parallel()
 

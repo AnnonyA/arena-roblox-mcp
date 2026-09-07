@@ -99,9 +99,12 @@ func TestRunWithArgsStatusCommandShowsCurrentStartupStatus(t *testing.T) {
 func TestRunWithArgsModelCommandUpdatesCurrentModel(t *testing.T) {
 	in := strings.NewReader("/model arena/new-model\n/status\n/exit\n")
 	var out bytes.Buffer
+	listModels := func(context.Context) ([]string, error) {
+		return []string{"arena/new-model", "arena/old-model"}, nil
+	}
 
-	if err := runWithArgs(context.Background(), in, &out, []string{"--model", "arena/old-model"}); err != nil {
-		t.Fatalf("runWithArgs() error = %v", err)
+	if err := runWithArgsAndModels(context.Background(), in, &out, []string{"--model", "arena/old-model"}, listModels); err != nil {
+		t.Fatalf("runWithArgsAndModels() error = %v", err)
 	}
 
 	got := out.String()

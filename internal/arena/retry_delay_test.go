@@ -1,6 +1,7 @@
 package arena
 
 import (
+	"net/http"
 	"testing"
 	"time"
 )
@@ -29,5 +30,16 @@ func TestRetryAfterDelayRespectsExplicitZero(t *testing.T) {
 	got := retryAfterDelay("0", time.Unix(0, 0))
 	if got != 0 {
 		t.Fatalf("retry delay = %v, want 0 for explicit Retry-After zero", got)
+	}
+}
+
+func TestRetryAfterDelayRespectsPastHTTPDate(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.September, 7, 18, 0, 0, 0, time.UTC)
+	past := now.Add(-time.Second).Format(http.TimeFormat)
+	got := retryAfterDelay(past, now)
+	if got != 0 {
+		t.Fatalf("retry delay = %v, want 0 for past Retry-After HTTP-date", got)
 	}
 }

@@ -167,7 +167,10 @@ func retryAfterDelay(value string, now time.Time) time.Duration {
 	if seconds, err := strconv.Atoi(strings.TrimSpace(value)); err == nil && seconds >= 0 {
 		return time.Duration(seconds) * time.Second
 	}
-	if at, err := http.ParseTime(value); err == nil && at.After(now) {
+	if at, err := http.ParseTime(value); err == nil {
+		if !at.After(now) {
+			return 0
+		}
 		return at.Sub(now)
 	}
 	return defaultRetryDelay

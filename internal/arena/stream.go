@@ -148,7 +148,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 }
 
 func retryableStatus(status int) bool {
-	return status == http.StatusTooManyRequests || status >= 500
+	return status == http.StatusTooManyRequests || (status >= 500 && status <= 599)
 }
 
 func waitRetry(ctx context.Context, retryAfter string) error {

@@ -34,7 +34,7 @@ func TestListModelsUsesBearerAuthAndParsesIDs(t *testing.T) {
 	}
 }
 
-func TestListModelsErrorDoesNotLeakAPIKey(t *testing.T) {
+func TestListModelsAuthenticationErrorDoesNotLeakAPIKey(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -49,8 +49,9 @@ func TestListModelsErrorDoesNotLeakAPIKey(t *testing.T) {
 	if strings.Contains(err.Error(), "top-secret") {
 		t.Fatalf("error leaked key: %v", err)
 	}
-	if !strings.Contains(err.Error(), "401") {
-		t.Fatalf("error = %v", err)
+	const want = "Arena authentication failed. Check your API key."
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err, want)
 	}
 }
 

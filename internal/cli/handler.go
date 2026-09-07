@@ -47,7 +47,11 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			_, err = io.WriteString(out, strings.Join(models, "\n")+"\n"); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "model" && strings.TrimSpace(input.Argument) == "" && actions.Models != nil {
-			models, err := actions.Models(ctx); if err != nil { return false, err }
+			models, err := actions.Models(ctx)
+			if err != nil {
+				if actions.Model != nil { return false, actions.Model(ctx, input.Argument) }
+				return false, err
+			}
 			if out == nil { return false, errors.New("cli: nil output") }
 			if _, err = io.WriteString(out, "Select a model with /model <id>:\n"); err != nil { return false, err }
 			if len(models) == 0 { _, err = io.WriteString(out, "No Arena models available.\n"); return false, err }

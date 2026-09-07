@@ -141,7 +141,6 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			if id := strings.TrimSpace(model); id != "" {
 				unique[id] = struct{}{}
 			}
-		}
 		models = models[:0]
 		for id := range unique {
 			models = append(models, id)
@@ -267,6 +266,10 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 				return err
 			}
 			status.MCP = "connected"
+			if len(sessions) == 0 {
+				_, err := io.WriteString(out, "No Roblox Studio MCP session detected.\n")
+				return err
+			}
 			requestedID := strings.TrimSpace(id)
 			if requestedID == "" && len(sessions) > 1 {
 				sort.Slice(sessions, func(i, j int) bool { return sessions[i].ID < sessions[j].ID })

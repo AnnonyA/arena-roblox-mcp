@@ -252,10 +252,24 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 		Clear: conversation.Clear,
 		Status: func() cli.StartupStatus { return status },
 		Models: listModels,
-		Model: func(_ context.Context, id string) error {
+		Model: func(ctx context.Context, id string) error {
 			modelName := strings.TrimSpace(id)
 			if modelName == "" {
 				return errors.New("model ID is required")
+			}
+			models, err := listModels(ctx)
+			if err != nil {
+				return err
+			}
+			found := false
+			for _, available := range models {
+				if available == modelName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("Arena model not found: %s", modelName)
 			}
 			cfg.Arena.Model = modelName
 			status.Model = modelName

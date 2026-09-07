@@ -44,6 +44,15 @@ func TestRetryAfterDelayRespectsPastHTTPDate(t *testing.T) {
 	}
 }
 
+func TestRetryAfterDelayFallsBackOnDurationOverflow(t *testing.T) {
+	t.Parallel()
+
+	got := retryAfterDelay("9223372036854775807", time.Unix(0, 0))
+	if got != defaultRetryDelay {
+		t.Fatalf("retry delay = %v, want fallback %v for overflowing Retry-After", got, defaultRetryDelay)
+	}
+}
+
 func TestRetryableStatusOnlyAccepts429And5xx(t *testing.T) {
 	t.Parallel()
 

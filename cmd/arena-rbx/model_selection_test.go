@@ -70,3 +70,30 @@ func TestRunWithDependenciesRejectsUnknownModelAndKeepsCLIUsable(t *testing.T) {
 		t.Fatalf("missing unknown-model error: %q", got)
 	}
 }
+
+func TestRunWithDependenciesModelWithoutIDListsChoicesAndKeepsCLIUsable(t *testing.T) {
+	in := strings.NewReader("/model\n/status\n/exit\n")
+	var out bytes.Buffer
+
+	listModels := func(context.Context) ([]string, error) {
+		return []string{"arena/model-b", "arena/model-a"}, nil
+	}
+
+	if err := runWithDependencies(context.Background(), in, &out, nil, listModels, nil); err != nil {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+
+	got := out.String()
+	if strings.Contains(got, "Error: model ID is required") {
+		t.Fatalf("/model without ID should guide selection, got: %q", got)
+	}
+	if !strings.Contains(got, "Select a model with /model <id>:\n") {
+		t.Fatalf("missing model selection guidance: %q", got)
+	}
+	if !strings.Contains(got, "arena/model-a\narena/model-b\n") {
+		t.Fatalf("missing discovered models: %q", got)
+	}
+	if !strings.Contains(got, "Model      not selected\n") {
+		t.Fatalf("CLI did not remain usable after /model: %q", got)
+	}
+}

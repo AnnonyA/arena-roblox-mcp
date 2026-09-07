@@ -21,6 +21,9 @@ func RunToolLoop(ctx context.Context, maxRounds int, runRound func(context.Conte
 		if err != nil {
 			return err
 		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if !continueLoop {
 			return nil
 		}

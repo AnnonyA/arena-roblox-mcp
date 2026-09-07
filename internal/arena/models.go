@@ -36,7 +36,8 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 			break
 		}
 		if attempt == 2 || !retryableStatus(resp.StatusCode) {
-			defer resp.Body.Close()
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
 			return nil, arenaStatusError("models", resp.StatusCode)
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)

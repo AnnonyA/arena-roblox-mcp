@@ -23,4 +23,7 @@ func TestRunReportsWhenNoModelsAvailableBeforeTask(t *testing.T) {
 	if !strings.Contains(got, "No Arena models available.\n") {
 		t.Fatalf("missing empty model discovery message: %q", got)
 	}
+	if strings.Contains(got, "Select a model with /model <id> before sending a task:\n") {
+		t.Fatalf("empty model discovery gave impossible selection instruction: %q", got)
+	}
 }

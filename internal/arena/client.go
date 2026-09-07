@@ -1,6 +1,7 @@
 package arena
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -24,4 +25,11 @@ func NewClient(opts ClientOptions) *Client {
 		hc = &http.Client{Timeout: 60 * time.Second}
 	}
 	return &Client{baseURL: strings.TrimRight(opts.BaseURL, "/"), apiKey: opts.APIKey, http: hc}
+}
+
+func arenaStatusError(operation string, status int) error {
+	if status == http.StatusUnauthorized {
+		return fmt.Errorf("Arena authentication failed. Check your API key.")
+	}
+	return fmt.Errorf("Arena %s request failed with HTTP %d", operation, status)
 }

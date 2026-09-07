@@ -75,7 +75,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		}
 		if attempt == 2 || !retryableStatus(resp.StatusCode) {
 			defer resp.Body.Close()
-			return ChatResult{}, fmt.Errorf("Arena chat request failed with HTTP %d", resp.StatusCode)
+			return ChatResult{}, arenaStatusError("chat", resp.StatusCode)
 		}
 		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()

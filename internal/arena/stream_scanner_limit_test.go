@@ -22,7 +22,7 @@ func TestStreamChatAcceptsSSEPayloadWithinEventLimit(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "", server.Client())
+	client := NewClient(ClientOptions{BaseURL: server.URL, HTTPClient: server.Client()})
 	result, err := client.StreamChat(context.Background(), ChatRequest{Model: "test"}, nil)
 	if err != nil {
 		t.Fatalf("StreamChat() error = %v", err)

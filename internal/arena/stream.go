@@ -73,7 +73,13 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 
 		resp, err = c.http.Do(httpReq)
 		if err != nil {
-			return ChatResult{}, fmt.Errorf("stream Arena chat: %w", err)
+			if attempt == 2 || ctx.Err() != nil {
+				return ChatResult{}, fmt.Errorf("stream Arena chat: %w", err)
+			}
+			if err := waitRetry(ctx, ""); err != nil {
+				return ChatResult{}, fmt.Errorf("wait to retry Arena chat: %w", err)
+			}
+			continue
 		}
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			break

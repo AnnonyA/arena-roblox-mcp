@@ -16,6 +16,7 @@ import (
 const (
 	defaultRetryDelay = 200 * time.Millisecond
 	maxRetryDelay     = time.Minute
+	maxSSEEventBytes  = 1024 * 1024
 )
 
 type Message struct {
@@ -153,13 +154,23 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxSSEEventBytes)
 	done := false
 	var dataLines []string
+	dataBytes := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.HasPrefix(line, "data:") {
-			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+			added := len(data)
+			if len(dataLines) > 0 {
+				added++
+			}
+			if dataBytes+added > maxSSEEventBytes {
+				return ChatResult{}, fmt.Errorf("Arena SSE event exceeds %d bytes", maxSSEEventBytes)
+			}
+			dataLines = append(dataLines, data)
+			dataBytes += added
 			continue
 		}
 		if line != "" || len(dataLines) == 0 {
@@ -168,6 +179,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 
 		payload := strings.Join(dataLines, "\n")
 		dataLines = dataLines[:0]
+		dataBytes = 0
 		done, err = processPayload(payload)
 		if err != nil {
 			return ChatResult{}, err

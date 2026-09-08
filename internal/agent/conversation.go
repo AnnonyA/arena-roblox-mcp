@@ -11,6 +11,7 @@ import (
 var (
 	ErrNoChatRound      = errors.New("chat round is not configured")
 	ErrNoToolDispatcher = errors.New("tool dispatcher is not configured")
+	ErrInvalidToolCall  = errors.New("invalid tool call")
 )
 
 type ChatRoundFunc func(context.Context, []arena.Message) (arena.ChatResult, error)
@@ -40,6 +41,11 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		}
 		if dispatcher == nil {
 			return false, ErrNoToolDispatcher
+		}
+		for _, call := range result.ToolCalls {
+			if call.ID == "" {
+				return false, ErrInvalidToolCall
+			}
 		}
 		toolRounds++
 

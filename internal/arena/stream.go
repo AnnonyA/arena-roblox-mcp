@@ -157,10 +157,15 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxSSELineBytes)
 	done := false
+	firstLine := true
 	var dataLines []string
 	dataBytes := 0
 	for scanner.Scan() {
 		line := scanner.Text()
+		if firstLine {
+			line = strings.TrimPrefix(line, "\ufeff")
+			firstLine = false
+		}
 		if strings.HasPrefix(line, "data:") {
 			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 			added := len(data)

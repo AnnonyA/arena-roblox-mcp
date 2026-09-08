@@ -6,29 +6,22 @@ import (
 	"testing"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
-	mcppkg "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
 
 func TestRunConversationRejectsNonObjectToolArgumentsBeforeDispatch(t *testing.T) {
-	called := false
-	dispatcher := NewToolDispatcher([]string{"script_read"}, toolCallerFunc(func(context.Context, string, []byte) (mcppkg.ToolResult, error) {
-		called = true
-		return mcppkg.ToolResult{}, nil
-	}))
+	caller := &conversationToolCaller{}
+	dispatcher := NewToolDispatcher([]string{"script_read"}, caller)
 
 	_, err := RunConversation(context.Background(), 1, nil, func(context.Context, []arena.Message) (arena.ChatResult, error) {
 		return arena.ChatResult{ToolCalls: []arena.ToolCall{{
-			ID: "call-1",
-			Function: arena.ToolCallFunction{
-				Name:      "script_read",
-				Arguments: "null",
-			},
+			ID:       "call-1",
+			Function: arena.FunctionCall{Name: "script_read", Arguments: "null"},
 		}}}, nil
 	}, dispatcher)
 	if !errors.Is(err, ErrInvalidToolCall) {
 		t.Fatalf("RunConversation error = %v, want ErrInvalidToolCall", err)
 	}
-	if called {
-		t.Fatal("malformed tool arguments reached the backend")
+	if len(caller.calls) != 0 {
+		t.Fatalf("backend calls = %#v, want none", caller.calls)
 	}
 }

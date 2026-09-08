@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -62,10 +63,8 @@ func TestFakeEndToEndModelSelectionTasksHistoryAndStatus(t *testing.T) {
 		{Role: "assistant", Content: "inspection complete"},
 		{Role: "user", Content: "fix the issue"},
 	}
-	for i := range wantSecond {
-		if second[i] != wantSecond[i] {
-			t.Fatalf("second request[%d] = %#v, want %#v", i, second[i], wantSecond[i])
-		}
+	if !reflect.DeepEqual(second, wantSecond) {
+		t.Fatalf("second request = %#v, want %#v", second, wantSecond)
 	}
 
 	got := out.String()

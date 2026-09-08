@@ -94,18 +94,25 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	done := false
+	var dataLines []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		if !strings.HasPrefix(line, "data:") {
+		if strings.HasPrefix(line, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
 			continue
 		}
-		payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if payload == "" {
+		if line != "" || len(dataLines) == 0 {
 			continue
 		}
+
+		payload := strings.Join(dataLines, "\n")
+		dataLines = dataLines[:0]
 		if payload == "[DONE]" {
 			done = true
 			break
+		}
+		if payload == "" {
+			continue
 		}
 
 		var chunk streamChunk

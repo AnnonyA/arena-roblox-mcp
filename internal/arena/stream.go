@@ -125,7 +125,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				if call.Type == "" {
 					call.Type = fragment.Type
 				}
-				call.Function.Name += fragment.Function.Name
+				if fragment.Function.Name != call.Function.Name {
+					call.Function.Name += fragment.Function.Name
+				}
 				call.Function.Arguments += fragment.Function.Arguments
 			}
 		}

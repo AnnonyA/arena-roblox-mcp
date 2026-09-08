@@ -29,13 +29,7 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 
 		resp, err = c.http.Do(req)
 		if err != nil {
-			if attempt == 2 || ctx.Err() != nil {
-				return nil, fmt.Errorf("list Arena models: %w", err)
-			}
-			if err := waitRetry(ctx, ""); err != nil {
-				return nil, fmt.Errorf("wait to retry Arena models: %w", err)
-			}
-			continue
+			return nil, fmt.Errorf("list Arena models: %w", err)
 		}
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			break

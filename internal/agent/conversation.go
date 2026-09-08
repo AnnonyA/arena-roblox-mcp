@@ -19,10 +19,14 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 	if runRound == nil {
 		return "", ErrNoChatRound
 	}
+	if maxRounds <= 0 {
+		maxRounds = DefaultMaxToolRounds
+	}
 
 	conversation := append([]arena.Message(nil), messages...)
 	var finalText string
-	err := RunToolLoop(ctx, maxRounds, func(ctx context.Context) (bool, error) {
+	toolRounds := 0
+	err := RunToolLoop(ctx, maxRounds+1, func(ctx context.Context) (bool, error) {
 		result, err := runRound(ctx, conversation)
 		if err != nil {
 			return false, err
@@ -31,9 +35,13 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 			finalText = result.Text
 			return false, nil
 		}
+		if toolRounds >= maxRounds {
+			return false, ErrMaxToolRounds
+		}
 		if dispatcher == nil {
 			return false, ErrNoToolDispatcher
 		}
+		toolRounds++
 
 		conversation = append(conversation, arena.Message{
 			Role:      "assistant",

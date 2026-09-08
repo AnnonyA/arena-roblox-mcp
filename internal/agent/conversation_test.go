@@ -89,3 +89,29 @@ func TestRunConversationFeedsToolErrorsBackToArena(t *testing.T) {
 		t.Fatalf("tool error message = %#v", got)
 	}
 }
+
+func TestRunConversationAllowsFinalAnswerAfterLastToolRound(t *testing.T) {
+	caller := &conversationToolCaller{}
+	dispatcher := NewToolDispatcher([]string{"script_read"}, caller)
+	initial := []arena.Message{{Role: "user", Content: "inspect once"}}
+
+	var requests int
+	runRound := func(_ context.Context, _ []arena.Message) (arena.ChatResult, error) {
+		requests++
+		if requests == 1 {
+			return arena.ChatResult{ToolCalls: []arena.ToolCall{{ID: "call-1", Type: "function", Function: arena.FunctionCall{Name: "script_read", Arguments: `{}`}}}}, nil
+		}
+		return arena.ChatResult{Text: "done after one tool round"}, nil
+	}
+
+	text, err := RunConversation(context.Background(), 1, initial, runRound, dispatcher)
+	if err != nil {
+		t.Fatalf("RunConversation: %v", err)
+	}
+	if text != "done after one tool round" {
+		t.Fatalf("text = %q, want final answer after the last permitted tool round", text)
+	}
+	if requests != 2 {
+		t.Fatalf("Arena requests = %d, want 2", requests)
+	}
+}

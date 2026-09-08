@@ -91,33 +91,17 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 
 	var result ChatResult
 	calls := map[int]*ToolCall{}
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	done := false
-	var dataLines []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "data:") {
-			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
-			continue
-		}
-		if line != "" || len(dataLines) == 0 {
-			continue
-		}
-
-		payload := strings.Join(dataLines, "\n")
-		dataLines = dataLines[:0]
+	processPayload := func(payload string) (bool, error) {
 		if payload == "[DONE]" {
-			done = true
-			break
+			return true, nil
 		}
 		if payload == "" {
-			continue
+			return false, nil
 		}
 
 		var chunk streamChunk
 		if err := json.Unmarshal([]byte(payload), &chunk); err != nil {
-			return ChatResult{}, fmt.Errorf("decode Arena stream chunk: %w", err)
+			return false, fmt.Errorf("decode Arena stream chunk: %w", err)
 		}
 		for _, choice := range chunk.Choices {
 			if choice.Index != 0 {
@@ -145,9 +129,41 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				call.Function.Arguments += fragment.Function.Arguments
 			}
 		}
+		return false, nil
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	done := false
+	var dataLines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+			continue
+		}
+		if line != "" || len(dataLines) == 0 {
+			continue
+		}
+
+		payload := strings.Join(dataLines, "\n")
+		dataLines = dataLines[:0]
+		done, err = processPayload(payload)
+		if err != nil {
+			return ChatResult{}, err
+		}
+		if done {
+			break
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return ChatResult{}, fmt.Errorf("read Arena stream: %w", err)
+	}
+	if !done && len(dataLines) > 0 {
+		done, err = processPayload(strings.Join(dataLines, "\n"))
+		if err != nil {
+			return ChatResult{}, err
+		}
 	}
 	if !done {
 		return ChatResult{}, fmt.Errorf("Arena stream ended before [DONE]")

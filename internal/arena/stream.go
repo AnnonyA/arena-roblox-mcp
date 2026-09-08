@@ -17,6 +17,7 @@ const (
 	defaultRetryDelay = 200 * time.Millisecond
 	maxRetryDelay     = time.Minute
 	maxSSEEventBytes  = 1024 * 1024
+	maxSSELineBytes   = maxSSEEventBytes + len("data: ") + 1
 )
 
 type Message struct {
@@ -154,7 +155,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), maxSSEEventBytes)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxSSELineBytes)
 	done := false
 	var dataLines []string
 	dataBytes := 0

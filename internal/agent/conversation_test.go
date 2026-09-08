@@ -115,3 +115,35 @@ func TestRunConversationAllowsFinalAnswerAfterLastToolRound(t *testing.T) {
 		t.Fatalf("Arena requests = %d, want 2", requests)
 	}
 }
+
+func TestRunConversationRejectsToolCallWithoutIDBeforeDispatch(t *testing.T) {
+	caller := &conversationToolCaller{}
+	dispatcher := NewToolDispatcher([]string{"script_read"}, caller)
+	initial := []arena.Message{{Role: "user", Content: "inspect safely"}}
+
+	var requests [][]arena.Message
+	runRound := func(_ context.Context, messages []arena.Message) (arena.ChatResult, error) {
+		requests = append(requests, append([]arena.Message(nil), messages...))
+		if len(requests) == 1 {
+			return arena.ChatResult{ToolCalls: []arena.ToolCall{{Type: "function", Function: arena.FunctionCall{Name: "script_read", Arguments: `{}`}}}}, nil
+		}
+		return arena.ChatResult{Text: "recovered from malformed tool call"}, nil
+	}
+
+	text, err := RunConversation(context.Background(), 12, initial, runRound, dispatcher)
+	if err != nil {
+		t.Fatalf("RunConversation: %v", err)
+	}
+	if text != "recovered from malformed tool call" {
+		t.Fatalf("text = %q, want recovery after malformed tool call", text)
+	}
+	if len(caller.calls) != 0 {
+		t.Fatalf("backend calls = %#v, want none", caller.calls)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("Arena requests = %d, want 2", len(requests))
+	}
+	if got := requests[1][2]; got.Role != "tool" || got.ToolCallID != "" || got.Content != `{"error":"invalid tool call: missing id"}` {
+		t.Fatalf("tool error message = %#v", got)
+	}
+}

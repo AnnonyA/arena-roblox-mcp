@@ -43,7 +43,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 			return false, ErrNoToolDispatcher
 		}
 		for _, call := range result.ToolCalls {
-			if call.ID == "" || !json.Valid([]byte(call.Function.Arguments)) {
+			if call.ID == "" || call.Function.Name == "" || !json.Valid([]byte(call.Function.Arguments)) {
 				return false, ErrInvalidToolCall
 			}
 		}

@@ -12,6 +12,7 @@ import (
 var (
 	ErrUnknownTool          = errors.New("unknown tool")
 	ErrInvalidToolArguments = errors.New("invalid tool arguments")
+	ErrNoToolCaller         = errors.New("tool caller is not configured")
 )
 
 type ToolCaller interface {
@@ -37,6 +38,9 @@ func (d *ToolDispatcher) Dispatch(ctx context.Context, name string, arguments js
 	}
 	if !json.Valid(arguments) {
 		return mcppkg.ToolResult{}, ErrInvalidToolArguments
+	}
+	if d.caller == nil {
+		return mcppkg.ToolResult{}, ErrNoToolCaller
 	}
 	return d.caller.CallTool(ctx, name, arguments)
 }

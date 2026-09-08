@@ -50,6 +50,22 @@ func TestToolDispatcherRejectsMalformedArgumentsWithoutCallingBackend(t *testing
 	}
 }
 
+func TestToolDispatcherRejectsNonObjectArgumentsWithoutCallingBackend(t *testing.T) {
+	for _, arguments := range []json.RawMessage{json.RawMessage(`null`), json.RawMessage(`[]`), json.RawMessage(`"path"`), json.RawMessage(`1`)} {
+		caller := &recordingToolCaller{}
+		dispatcher := NewToolDispatcher([]string{"read_script"}, caller)
+
+		_, err := dispatcher.Dispatch(context.Background(), "read_script", arguments)
+
+		if !errors.Is(err, ErrInvalidToolArguments) {
+			t.Fatalf("Dispatch(%s) error = %v, want ErrInvalidToolArguments", arguments, err)
+		}
+		if caller.calls != 0 {
+			t.Fatalf("Dispatch(%s) backend calls = %d, want 0", arguments, caller.calls)
+		}
+	}
+}
+
 func TestToolDispatcherRejectsMissingCaller(t *testing.T) {
 	dispatcher := NewToolDispatcher([]string{"read_script"}, nil)
 

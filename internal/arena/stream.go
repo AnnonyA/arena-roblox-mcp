@@ -125,8 +125,13 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				if call.Type == "" {
 					call.Type = fragment.Type
 				}
-				if fragment.Function.Name != call.Function.Name {
-					call.Function.Name += fragment.Function.Name
+				name := fragment.Function.Name
+				switch {
+				case strings.HasPrefix(name, call.Function.Name):
+					call.Function.Name = name
+				case strings.HasPrefix(call.Function.Name, name):
+				default:
+					call.Function.Name += name
 				}
 				call.Function.Arguments += fragment.Function.Arguments
 			}

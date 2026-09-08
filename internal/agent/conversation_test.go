@@ -57,3 +57,35 @@ func TestRunConversationFeedsToolResultsBackToArena(t *testing.T) {
 		t.Fatalf("tool result message = %#v", second[2])
 	}
 }
+
+func TestRunConversationFeedsToolErrorsBackToArena(t *testing.T) {
+	dispatcher := NewToolDispatcher([]string{"script_read"}, &conversationToolCaller{})
+	initial := []arena.Message{{Role: "user", Content: "inspect something"}}
+
+	var requests [][]arena.Message
+	runRound := func(_ context.Context, messages []arena.Message) (arena.ChatResult, error) {
+		requests = append(requests, append([]arena.Message(nil), messages...))
+		if len(requests) == 1 {
+			return arena.ChatResult{ToolCalls: []arena.ToolCall{{ID: "call-bad", Type: "function", Function: arena.FunctionCall{Name: "missing_tool", Arguments: `{}`}}}}, nil
+		}
+		return arena.ChatResult{Text: "recovered after tool error"}, nil
+	}
+
+	text, err := RunConversation(context.Background(), 12, initial, runRound, dispatcher)
+	if err != nil {
+		t.Fatalf("RunConversation: %v", err)
+	}
+	if text != "recovered after tool error" {
+		t.Fatalf("text = %q, want recovered after tool error", text)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("Arena requests = %d, want 2", len(requests))
+	}
+	second := requests[1]
+	if len(second) != 3 {
+		t.Fatalf("second request messages = %#v, want user + assistant tool call + tool error", second)
+	}
+	if got := second[2]; got.Role != "tool" || got.ToolCallID != "call-bad" || got.Content != `{"error":"unknown tool: missing_tool"}` {
+		t.Fatalf("tool error message = %#v", got)
+	}
+}

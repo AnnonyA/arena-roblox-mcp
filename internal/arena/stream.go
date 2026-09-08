@@ -124,8 +124,12 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 					call = &ToolCall{Index: fragment.Index}
 					calls[fragment.Index] = call
 				}
-				call.ID += fragment.ID
-				call.Type += fragment.Type
+				if call.ID == "" {
+					call.ID = fragment.ID
+				}
+				if call.Type == "" {
+					call.Type = fragment.Type
+				}
 				call.Function.Name += fragment.Function.Name
 				call.Function.Arguments += fragment.Function.Arguments
 			}

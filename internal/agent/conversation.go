@@ -42,15 +42,23 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		})
 		for _, call := range result.ToolCalls {
 			toolResult, err := dispatcher.Dispatch(ctx, call.Function.Name, json.RawMessage(call.Function.Arguments))
+			var content json.RawMessage
 			if err != nil {
-				return false, err
-			}
-			content := toolResult.StructuredContent
-			if len(content) == 0 {
-				content = toolResult.Content
-			}
-			if len(content) == 0 {
-				content = json.RawMessage("null")
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return false, ctxErr
+				}
+				content, err = json.Marshal(map[string]string{"error": err.Error()})
+				if err != nil {
+					return false, err
+				}
+			} else {
+				content = toolResult.StructuredContent
+				if len(content) == 0 {
+					content = toolResult.Content
+				}
+				if len(content) == 0 {
+					content = json.RawMessage("null")
+				}
 			}
 			conversation = append(conversation, arena.Message{
 				Role:       "tool",

@@ -4,21 +4,24 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
-func TestStreamChatRejectsPrematureEOF(t *testing.T) {
+func TestStreamChatDispatchesFinalSSEEventAtEOF(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"ok\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]"))
 	}))
 	defer srv.Close()
 
 	c := NewClient(ClientOptions{BaseURL: srv.URL})
-	_, err := c.StreamChat(context.Background(), ChatRequest{Model: "model-a"}, nil)
-	if err == nil || !strings.Contains(err.Error(), "before [DONE]") {
-		t.Fatalf("err = %v, want premature EOF error", err)
+	got, err := c.StreamChat(context.Background(), ChatRequest{Model: "model-a"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Text != "ok" {
+		t.Fatalf("text = %q, want ok", got.Text)
 	}
 }

@@ -44,6 +44,7 @@ type ChatResult struct {
 }
 type streamChunk struct {
 	Choices []struct {
+		Index int `json:"index"`
 		Delta struct {
 			Content   string     `json:"content"`
 			ToolCalls []ToolCall `json:"tool_calls"`
@@ -112,6 +113,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 			return ChatResult{}, fmt.Errorf("decode Arena stream chunk: %w", err)
 		}
 		for _, choice := range chunk.Choices {
+			if choice.Index != 0 {
+				continue
+			}
 			if choice.Delta.Content != "" {
 				result.Text += choice.Delta.Content
 				if onText != nil {

@@ -43,7 +43,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 			return false, ErrNoToolDispatcher
 		}
 		for _, call := range result.ToolCalls {
-			if call.ID == "" || call.Function.Name == "" || !json.Valid([]byte(call.Function.Arguments)) {
+			if call.ID == "" || call.Function.Name == "" || !validToolArguments(call.Function.Arguments) {
 				return false, ErrInvalidToolCall
 			}
 		}
@@ -86,4 +86,12 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		return "", err
 	}
 	return finalText, nil
+}
+
+func validToolArguments(arguments string) bool {
+	var object map[string]any
+	if err := json.Unmarshal([]byte(arguments), &object); err != nil {
+		return false
+	}
+	return object != nil
 }

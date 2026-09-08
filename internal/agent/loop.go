@@ -7,9 +7,15 @@ import (
 
 const DefaultMaxToolRounds = 12
 
-var ErrMaxToolRounds = errors.New("maximum tool rounds reached")
+var (
+	ErrMaxToolRounds = errors.New("maximum tool rounds reached")
+	ErrNoRoundFunc   = errors.New("tool loop round is not configured")
+)
 
 func RunToolLoop(ctx context.Context, maxRounds int, runRound func(context.Context) (bool, error)) error {
+	if runRound == nil {
+		return ErrNoRoundFunc
+	}
 	if maxRounds <= 0 {
 		maxRounds = DefaultMaxToolRounds
 	}

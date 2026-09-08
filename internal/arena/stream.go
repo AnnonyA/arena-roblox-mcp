@@ -133,7 +133,14 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				default:
 					call.Function.Name += name
 				}
-				call.Function.Arguments += fragment.Function.Arguments
+				arguments := fragment.Function.Arguments
+				switch {
+				case strings.HasPrefix(arguments, call.Function.Arguments):
+					call.Function.Arguments = arguments
+				case strings.HasPrefix(call.Function.Arguments, arguments):
+				default:
+					call.Function.Arguments += arguments
+				}
 			}
 		}
 		return false, nil

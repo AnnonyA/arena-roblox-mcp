@@ -33,6 +33,9 @@ func NewToolDispatcher(toolNames []string, caller ToolCaller) *ToolDispatcher {
 }
 
 func (d *ToolDispatcher) Dispatch(ctx context.Context, name string, arguments json.RawMessage) (mcppkg.ToolResult, error) {
+	if d == nil {
+		return mcppkg.ToolResult{}, ErrNoToolDispatcher
+	}
 	if _, ok := d.allowed[name]; !ok {
 		return mcppkg.ToolResult{}, fmt.Errorf("%w: %s", ErrUnknownTool, name)
 	}

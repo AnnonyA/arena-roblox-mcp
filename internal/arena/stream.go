@@ -244,7 +244,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		if call.Type == "" {
 			return ChatResult{}, fmt.Errorf("missing tool call type for index %d", index)
 		}
-		if call.Function.Name == "" {
+		if strings.TrimSpace(call.Function.Name) == "" {
 			return ChatResult{}, fmt.Errorf("missing tool call name for index %d", index)
 		}
 		result.ToolCalls = append(result.ToolCalls, *call)

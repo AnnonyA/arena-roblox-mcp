@@ -237,7 +237,11 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	}
 	sort.Ints(indexes)
 	for _, index := range indexes {
-		result.ToolCalls = append(result.ToolCalls, *calls[index])
+		call := calls[index]
+		if call.Type == "" {
+			return ChatResult{}, fmt.Errorf("missing tool call type for index %d", index)
+		}
+		result.ToolCalls = append(result.ToolCalls, *call)
 	}
 	return result, nil
 }

@@ -18,6 +18,7 @@ const (
 	maxRetryDelay     = time.Minute
 	maxSSEEventBytes  = 1024 * 1024
 	maxSSELineBytes   = maxSSEEventBytes + len("data: ") + 1
+	maxStreamToolCalls = 128
 )
 
 type Message struct {
@@ -133,6 +134,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				}
 				call := calls[fragment.Index]
 				if call == nil {
+					if len(calls) >= maxStreamToolCalls {
+						return false, fmt.Errorf("too many tool calls in Arena stream: limit %d", maxStreamToolCalls)
+					}
 					call = &ToolCall{Index: fragment.Index}
 					calls[fragment.Index] = call
 				}

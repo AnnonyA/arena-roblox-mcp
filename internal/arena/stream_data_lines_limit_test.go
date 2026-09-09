@@ -22,7 +22,7 @@ func TestStreamChatRejectsTooManySSEDataLines(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "test-key", server.Client())
+	client := NewClient(ClientOptions{BaseURL: server.URL, APIKey: "test-key", HTTPClient: server.Client()})
 	_, err := client.StreamChat(context.Background(), ChatRequest{Model: "test"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "too many data lines") {
 		t.Fatalf("StreamChat error = %v, want too many data lines error", err)

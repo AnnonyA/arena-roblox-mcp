@@ -238,7 +238,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	sort.Ints(indexes)
 	for _, index := range indexes {
 		call := calls[index]
-		if call.ID == "" {
+		if strings.TrimSpace(call.ID) == "" {
 			return ChatResult{}, fmt.Errorf("missing tool call id for index %d", index)
 		}
 		if call.Type == "" {

@@ -19,12 +19,12 @@ func TestStreamChatRejectsOversizedAccumulatedToolCallArguments(t *testing.T) {
 		}
 
 		_, _ = fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"script_write\"}}]}}]}\n\n")
-		writeArguments(`{\"data\":\"`)
+		writeArguments(`{"data":"`)
 		chunk := strings.Repeat("a", 128*1024)
 		for range 9 {
 			writeArguments(chunk)
 		}
-		writeArguments(`\"}`)
+		writeArguments(`"}`)
 		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 	}))
 	defer srv.Close()

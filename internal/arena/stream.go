@@ -129,8 +129,12 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 					call = &ToolCall{Index: fragment.Index}
 					calls[fragment.Index] = call
 				}
-				if call.ID == "" {
-					call.ID = fragment.ID
+				if fragment.ID != "" {
+					if call.ID == "" {
+						call.ID = fragment.ID
+					} else if call.ID != fragment.ID {
+						return false, fmt.Errorf("conflicting tool call id for index %d", fragment.Index)
+					}
 				}
 				if call.Type == "" {
 					call.Type = fragment.Type

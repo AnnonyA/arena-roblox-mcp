@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	defaultRetryDelay = 200 * time.Millisecond
-	maxRetryDelay     = time.Minute
-	maxSSEEventBytes  = 1024 * 1024
-	maxSSELineBytes   = maxSSEEventBytes + len("data: ") + 1
-	maxStreamToolCalls = 128
+	defaultRetryDelay              = 200 * time.Millisecond
+	maxRetryDelay                  = time.Minute
+	maxSSEEventBytes               = 1024 * 1024
+	maxSSELineBytes                = maxSSEEventBytes + len("data: ") + 1
+	maxStreamToolCalls             = 128
+	maxStreamToolCallArgumentBytes = maxSSEEventBytes
 )
 
 type Message struct {
@@ -177,6 +178,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				case strings.HasPrefix(call.Function.Arguments, arguments):
 				default:
 					call.Function.Arguments += arguments
+				}
+				if len(call.Function.Arguments) > maxStreamToolCallArgumentBytes {
+					return false, fmt.Errorf("tool call arguments exceed %d bytes for index %d", maxStreamToolCallArgumentBytes, fragment.Index)
 				}
 			}
 		}

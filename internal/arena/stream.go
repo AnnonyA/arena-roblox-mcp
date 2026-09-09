@@ -18,6 +18,7 @@ const (
 	maxRetryDelay                  = time.Minute
 	maxSSEEventBytes               = 1024 * 1024
 	maxSSELineBytes                = maxSSEEventBytes + len("data: ") + 1
+	maxSSEDataLines                = 4096
 	maxStreamTextBytes             = maxSSEEventBytes
 	maxStreamToolCalls             = 128
 	maxStreamToolCallNameBytes     = maxSSEEventBytes
@@ -209,6 +210,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		}
 		if strings.HasPrefix(line, "data:") {
 			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+			if len(dataLines) >= maxSSEDataLines {
+				return ChatResult{}, fmt.Errorf("Arena SSE event has too many data lines: limit %d", maxSSEDataLines)
+			}
 			added := len(data)
 			if len(dataLines) > 0 {
 				added++

@@ -18,6 +18,7 @@ const (
 	maxRetryDelay                  = time.Minute
 	maxSSEEventBytes               = 1024 * 1024
 	maxSSELineBytes                = maxSSEEventBytes + len("data: ") + 1
+	maxStreamTextBytes             = maxSSEEventBytes
 	maxStreamToolCalls             = 128
 	maxStreamToolCallArgumentBytes = maxSSEEventBytes
 )
@@ -124,6 +125,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				continue
 			}
 			if choice.Delta.Content != "" {
+				if len(result.Text)+len(choice.Delta.Content) > maxStreamTextBytes {
+					return false, fmt.Errorf("streamed text exceeds %d bytes", maxStreamTextBytes)
+				}
 				result.Text += choice.Delta.Content
 				if onText != nil {
 					onText(choice.Delta.Content)

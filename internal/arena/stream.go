@@ -145,6 +145,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 					}
 				}
 				if fragment.Type != "" {
+					if fragment.Type != "function" {
+						return false, fmt.Errorf("unsupported tool call type %q for index %d", fragment.Type, fragment.Index)
+					}
 					if call.Type == "" {
 						call.Type = fragment.Type
 					} else if call.Type != fragment.Type {

@@ -36,6 +36,9 @@ func (d *ToolDispatcher) Dispatch(ctx context.Context, name string, arguments js
 	if d == nil {
 		return mcppkg.ToolResult{}, ErrNoToolDispatcher
 	}
+	if err := ctx.Err(); err != nil {
+		return mcppkg.ToolResult{}, err
+	}
 	if _, ok := d.allowed[name]; !ok {
 		return mcppkg.ToolResult{}, fmt.Errorf("%w: %s", ErrUnknownTool, name)
 	}

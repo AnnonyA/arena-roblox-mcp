@@ -12,9 +12,10 @@ import (
 func TestStreamChatRejectsTooManyToolCalls(t *testing.T) {
 	t.Parallel()
 
+	const expectedLimit = 128
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		for i := 0; i <= maxStreamToolCalls; i++ {
+		for i := 0; i <= expectedLimit; i++ {
 			_, _ = fmt.Fprintf(w, "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":%d,\"id\":\"call_%d\",\"type\":\"function\",\"function\":{\"name\":\"script_read\",\"arguments\":\"{}\"}}]}}]}\n\n", i, i)
 		}
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))

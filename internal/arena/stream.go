@@ -124,6 +124,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				}
 			}
 			for _, fragment := range choice.Delta.ToolCalls {
+				if fragment.Index < 0 {
+					return false, fmt.Errorf("invalid negative tool call index %d", fragment.Index)
+				}
 				call := calls[fragment.Index]
 				if call == nil {
 					call = &ToolCall{Index: fragment.Index}

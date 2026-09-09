@@ -247,6 +247,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		if strings.TrimSpace(call.Function.Name) == "" {
 			return ChatResult{}, fmt.Errorf("missing tool call name for index %d", index)
 		}
+		if !json.Valid([]byte(call.Function.Arguments)) {
+			return ChatResult{}, fmt.Errorf("invalid tool call arguments for index %d", index)
+		}
 		result.ToolCalls = append(result.ToolCalls, *call)
 	}
 	return result, nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	mcppkg "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
@@ -42,6 +43,9 @@ func (d *ToolDispatcher) Dispatch(ctx context.Context, name string, arguments js
 	}
 	if err := ctx.Err(); err != nil {
 		return mcppkg.ToolResult{}, err
+	}
+	if strings.TrimSpace(name) == "" {
+		return mcppkg.ToolResult{}, fmt.Errorf("%w: blank name", ErrUnknownTool)
 	}
 	if _, ok := d.allowed[name]; !ok {
 		return mcppkg.ToolResult{}, fmt.Errorf("%w: %s", ErrUnknownTool, name)

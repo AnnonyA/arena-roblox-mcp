@@ -76,6 +76,22 @@ func TestToolDispatcherRejectsMissingCaller(t *testing.T) {
 	}
 }
 
+func TestToolDispatcherRejectsCancelledContextWithoutCallingBackend(t *testing.T) {
+	caller := &recordingToolCaller{}
+	dispatcher := NewToolDispatcher([]string{"read_script"}, caller)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := dispatcher.Dispatch(ctx, "read_script", json.RawMessage(`{}`))
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("Dispatch() error = %v, want context.Canceled", err)
+	}
+	if caller.calls != 0 {
+		t.Fatalf("backend calls = %d, want 0", caller.calls)
+	}
+}
+
 func TestToolDispatcherCallsKnownTool(t *testing.T) {
 	caller := &recordingToolCaller{}
 	dispatcher := NewToolDispatcher([]string{"read_script"}, caller)

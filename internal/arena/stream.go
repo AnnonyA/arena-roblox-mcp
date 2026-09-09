@@ -101,6 +101,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 
 	var result ChatResult
 	calls := map[int]*ToolCall{}
+	callIDs := map[string]int{}
 	processPayload := func(payload string) (bool, error) {
 		if payload == "[DONE]" {
 			return true, nil
@@ -133,8 +134,12 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 					calls[fragment.Index] = call
 				}
 				if fragment.ID != "" {
+					if index, ok := callIDs[fragment.ID]; ok && index != fragment.Index {
+						return false, fmt.Errorf("duplicate tool call id %q for indexes %d and %d", fragment.ID, index, fragment.Index)
+					}
 					if call.ID == "" {
 						call.ID = fragment.ID
+						callIDs[fragment.ID] = fragment.Index
 					} else if call.ID != fragment.ID {
 						return false, fmt.Errorf("conflicting tool call id for index %d", fragment.Index)
 					}

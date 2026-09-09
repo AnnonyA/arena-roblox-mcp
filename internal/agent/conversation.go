@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
@@ -44,7 +45,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		}
 		seenCallIDs := make(map[string]struct{}, len(result.ToolCalls))
 		for _, call := range result.ToolCalls {
-			if call.ID == "" || call.Function.Name == "" || !validToolArguments(call.Function.Arguments) {
+			if call.ID == "" || strings.TrimSpace(call.Function.Name) == "" || !validToolArguments(call.Function.Arguments) {
 				return false, ErrInvalidToolCall
 			}
 			if _, exists := seenCallIDs[call.ID]; exists {

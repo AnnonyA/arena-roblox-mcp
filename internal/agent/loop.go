@@ -16,6 +16,9 @@ func RunToolLoop(ctx context.Context, maxRounds int, runRound func(context.Conte
 	if runRound == nil {
 		return ErrNoRoundFunc
 	}
+	if ctx == nil {
+		return ErrNoContext
+	}
 	if maxRounds <= 0 {
 		maxRounds = DefaultMaxToolRounds
 	}

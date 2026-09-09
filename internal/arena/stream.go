@@ -20,6 +20,7 @@ const (
 	maxSSELineBytes                = maxSSEEventBytes + len("data: ") + 1
 	maxStreamTextBytes             = maxSSEEventBytes
 	maxStreamToolCalls             = 128
+	maxStreamToolCallNameBytes     = maxSSEEventBytes
 	maxStreamToolCallArgumentBytes = maxSSEEventBytes
 )
 
@@ -174,6 +175,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				case strings.HasPrefix(call.Function.Name, name):
 				default:
 					call.Function.Name += name
+				}
+				if len(call.Function.Name) > maxStreamToolCallNameBytes {
+					return false, fmt.Errorf("tool call name exceeds %d bytes for index %d", maxStreamToolCallNameBytes, fragment.Index)
 				}
 				arguments := fragment.Function.Arguments
 				switch {

@@ -115,6 +115,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 			return false, fmt.Errorf("decode Arena stream chunk: %w", err)
 		}
 		for _, choice := range chunk.Choices {
+			if choice.Index < 0 {
+				return false, fmt.Errorf("invalid negative choice index %d", choice.Index)
+			}
 			if choice.Index != 0 {
 				continue
 			}

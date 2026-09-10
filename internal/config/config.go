@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"unicode/utf8"
 )
 
 const maxConfigFileBytes = 1 << 20
@@ -77,6 +78,9 @@ func Load(path string) (Config, error) {
 	}
 	if len(data) > maxConfigFileBytes {
 		return Config{}, fmt.Errorf("config file is too large: maximum size is %d bytes", maxConfigFileBytes)
+	}
+	if !utf8.Valid(data) {
+		return Config{}, errors.New("config file must contain valid UTF-8")
 	}
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 || trimmed[0] != '{' {

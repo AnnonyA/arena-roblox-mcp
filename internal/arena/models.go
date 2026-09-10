@@ -67,10 +67,15 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, fmt.Errorf("decode Arena models: %w", err)
 	}
+	seen := make(map[string]struct{}, len(payload.Data))
 	for i, model := range payload.Data {
 		if strings.TrimSpace(model.ID) == "" {
 			return nil, fmt.Errorf("decode Arena models: blank model id at index %d", i)
 		}
+		if _, ok := seen[model.ID]; ok {
+			return nil, fmt.Errorf("decode Arena models: duplicate model id %q at index %d", model.ID, i)
+		}
+		seen[model.ID] = struct{}{}
 	}
 	return payload.Data, nil
 }

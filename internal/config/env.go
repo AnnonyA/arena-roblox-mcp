@@ -12,6 +12,11 @@ import (
 
 const maxDotEnvBytes = 1 << 20
 
+type dotEnvEntry struct {
+	key   string
+	value string
+}
+
 func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string, string) error) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -33,6 +38,7 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 		return fmt.Errorf(".env file contains invalid UTF-8")
 	}
 
+	var entries []dotEnvEntry
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	lineNo := 0
 	for scanner.Scan() {
@@ -56,12 +62,19 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 			}
 			value = value[1 : len(value)-1]
 		}
-		if _, exists := lookup(key); exists {
+		entries = append(entries, dotEnvEntry{key: key, value: value})
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if _, exists := lookup(entry.key); exists {
 			continue
 		}
-		if err := set(key, value); err != nil {
+		if err := set(entry.key, entry.value); err != nil {
 			return err
 		}
 	}
-	return scanner.Err()
+	return nil
 }

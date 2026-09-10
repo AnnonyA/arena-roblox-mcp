@@ -78,6 +78,10 @@ func Load(path string) (Config, error) {
 	if len(data) > maxConfigFileBytes {
 		return Config{}, fmt.Errorf("config file is too large: maximum size is %d bytes", maxConfigFileBytes)
 	}
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return Config{}, errors.New("config file must contain a JSON object")
+	}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()

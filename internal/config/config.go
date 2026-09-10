@@ -86,6 +86,9 @@ func Load(path string) (Config, error) {
 	if len(trimmed) == 0 || trimmed[0] != '{' {
 		return Config{}, errors.New("config file must contain a JSON object")
 	}
+	if err := rejectDuplicateJSONKeys(data); err != nil {
+		return Config{}, err
+	}
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
@@ -108,6 +111,57 @@ func Load(path string) (Config, error) {
 		cfg.Agent.ContextBudget = "balanced"
 	}
 	return cfg, nil
+}
+
+func rejectDuplicateJSONKeys(data []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	return scanJSONValue(decoder)
+}
+
+func scanJSONValue(decoder *json.Decoder) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+
+	delim, ok := token.(json.Delim)
+	if !ok {
+		return nil
+	}
+
+	switch delim {
+	case '{':
+		seen := make(map[string]struct{})
+		for decoder.More() {
+			keyToken, err := decoder.Token()
+			if err != nil {
+				return err
+			}
+			key, ok := keyToken.(string)
+			if !ok {
+				return errors.New("config file contains an invalid JSON object key")
+			}
+			if _, exists := seen[key]; exists {
+				return fmt.Errorf("config file contains duplicate JSON key %q", key)
+			}
+			seen[key] = struct{}{}
+			if err := scanJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err := decoder.Token()
+		return err
+	case '[':
+		for decoder.More() {
+			if err := scanJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+		_, err := decoder.Token()
+		return err
+	default:
+		return nil
+	}
 }
 
 func ResolveAPIKey(cfg Config, getenv func(string) string) (string, error) {

@@ -34,10 +34,11 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 		if key == "" {
 			return fmt.Errorf("invalid .env entry on line %d", lineNo)
 		}
-		if len(value) >= 2 {
-			if (value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'') {
-				value = value[1 : len(value)-1]
+		if len(value) > 0 && (value[0] == '"' || value[0] == '\'') {
+			if len(value) < 2 || value[len(value)-1] != value[0] {
+				return fmt.Errorf("invalid .env entry on line %d: unbalanced quotes", lineNo)
 			}
+			value = value[1 : len(value)-1]
 		}
 		if _, exists := lookup(key); exists {
 			continue

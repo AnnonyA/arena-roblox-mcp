@@ -1,7 +1,9 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -48,5 +50,20 @@ func TestLoadMissingConfigUsesDefaults(t *testing.T) {
 	}
 	if _, ok := cfg.MCPServers["Roblox_Studio"]; !ok {
 		t.Fatal("Roblox_Studio default MCP server missing")
+	}
+}
+
+func TestLoadRejectsUnknownFields(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "arena-rbx.json")
+	if err := os.WriteFile(path, []byte(`{"arena":{"apiKeyEnvv":"ARENA_API_KEY"}}`), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("Load error = nil, want unknown field error")
+	}
+	if !strings.Contains(err.Error(), "unknown field") {
+		t.Fatalf("Load error = %q, want unknown field error", err)
 	}
 }

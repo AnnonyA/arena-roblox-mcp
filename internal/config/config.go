@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,7 +78,16 @@ func Load(path string) (Config, error) {
 	if len(data) > maxConfigFileBytes {
 		return Config{}, fmt.Errorf("config file is too large: maximum size is %d bytes", maxConfigFileBytes)
 	}
-	if err := json.Unmarshal(data, &cfg); err != nil {
+
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&cfg); err != nil {
+		return Config{}, err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		if err == nil {
+			return Config{}, errors.New("config file must contain a single JSON object")
+		}
 		return Config{}, err
 	}
 	if cfg.Arena.APIKeyEnv == "" {

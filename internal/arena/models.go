@@ -69,8 +69,12 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	}
 	seen := make(map[string]struct{}, len(payload.Data))
 	for i, model := range payload.Data {
-		if strings.TrimSpace(model.ID) == "" {
+		trimmedID := strings.TrimSpace(model.ID)
+		if trimmedID == "" {
 			return nil, fmt.Errorf("decode Arena models: blank model id at index %d", i)
+		}
+		if trimmedID != model.ID {
+			return nil, fmt.Errorf("decode Arena models: model id has surrounding whitespace at index %d", i)
 		}
 		if _, ok := seen[model.ID]; ok {
 			return nil, fmt.Errorf("decode Arena models: duplicate model id %q at index %d", model.ID, i)

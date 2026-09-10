@@ -95,6 +95,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 			if unicode.IsControl(r) {
 				return nil, fmt.Errorf("decode Arena models: model id contains control character at index %d", i)
 			}
+			if isBidirectionalFormatting(r) {
+				return nil, fmt.Errorf("decode Arena models: model id contains bidirectional formatting at index %d", i)
+			}
 		}
 		if _, ok := seen[model.ID]; ok {
 			return nil, fmt.Errorf("decode Arena models: duplicate model id %q at index %d", model.ID, i)
@@ -102,4 +105,8 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 		seen[model.ID] = struct{}{}
 	}
 	return payload.Data, nil
+}
+
+func isBidirectionalFormatting(r rune) bool {
+	return r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069'
 }

@@ -9,7 +9,10 @@ import (
 	"strings"
 )
 
-const maxModelsResponseBytes = 1024 * 1024
+const (
+	maxModelsResponseBytes = 1024 * 1024
+	maxModelIDBytes        = 4096
+)
 
 type Model struct {
 	ID string `json:"id"`
@@ -75,6 +78,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 		}
 		if trimmedID != model.ID {
 			return nil, fmt.Errorf("decode Arena models: model id has surrounding whitespace at index %d", i)
+		}
+		if len(model.ID) > maxModelIDBytes {
+			return nil, fmt.Errorf("decode Arena models: model id exceeds %d bytes at index %d", maxModelIDBytes, i)
 		}
 		if _, ok := seen[model.ID]; ok {
 			return nil, fmt.Errorf("decode Arena models: duplicate model id %q at index %d", model.ID, i)

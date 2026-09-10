@@ -13,6 +13,7 @@ import (
 const (
 	maxModelsResponseBytes = 1024 * 1024
 	maxModelIDBytes        = 4096
+	maxModelCount          = 4096
 )
 
 type Model struct {
@@ -70,6 +71,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	var payload modelsResponse
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, fmt.Errorf("decode Arena models: %w", err)
+	}
+	if len(payload.Data) > maxModelCount {
+		return nil, fmt.Errorf("decode Arena models: model count exceeds %d", maxModelCount)
 	}
 	seen := make(map[string]struct{}, len(payload.Data))
 	for i, model := range payload.Data {

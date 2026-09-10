@@ -40,6 +40,7 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 	if bytes.IndexByte(data, 0) >= 0 {
 		return fmt.Errorf(".env file contains NUL byte")
 	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 
 	var entries []dotEnvEntry
 	seen := make(map[string]struct{})

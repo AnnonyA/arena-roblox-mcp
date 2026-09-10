@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
+
+const maxModelsResponseBytes = 1024 * 1024
 
 type Model struct {
 	ID string `json:"id"`
@@ -51,8 +54,16 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxModelsResponseBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read Arena models: %w", err)
+	}
+	if len(body) > maxModelsResponseBytes {
+		return nil, fmt.Errorf("Arena models response exceeds %d bytes", maxModelsResponseBytes)
+	}
+
 	var payload modelsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, fmt.Errorf("decode Arena models: %w", err)
 	}
 	return payload.Data, nil

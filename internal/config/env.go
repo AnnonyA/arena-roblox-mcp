@@ -2,10 +2,14 @@ package config
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
+
+const maxDotEnvBytes = 1 << 20
 
 func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string, string) error) error {
 	f, err := os.Open(path)
@@ -17,7 +21,15 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
+	data, err := io.ReadAll(io.LimitReader(f, maxDotEnvBytes+1))
+	if err != nil {
+		return err
+	}
+	if len(data) > maxDotEnvBytes {
+		return fmt.Errorf(".env file too large (maximum %d bytes)", maxDotEnvBytes)
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(data))
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++

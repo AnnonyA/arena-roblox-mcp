@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 const maxModelsResponseBytes = 1024 * 1024
@@ -65,6 +66,11 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	var payload modelsResponse
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, fmt.Errorf("decode Arena models: %w", err)
+	}
+	for i, model := range payload.Data {
+		if strings.TrimSpace(model.ID) == "" {
+			return nil, fmt.Errorf("decode Arena models: blank model id at index %d", i)
+		}
 	}
 	return payload.Data, nil
 }

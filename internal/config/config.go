@@ -3,8 +3,12 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 )
+
+const maxConfigFileBytes = 1 << 20
 
 type Config struct {
 	Arena      ArenaConfig                `json:"arena"`
@@ -57,12 +61,21 @@ func Default() Config {
 
 func Load(path string) (Config, error) {
 	cfg := Default()
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return cfg, nil
 		}
 		return Config{}, err
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(io.LimitReader(f, maxConfigFileBytes+1))
+	if err != nil {
+		return Config{}, err
+	}
+	if len(data) > maxConfigFileBytes {
+		return Config{}, fmt.Errorf("config file is too large: maximum size is %d bytes", maxConfigFileBytes)
 	}
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, err

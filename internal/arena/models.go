@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -66,6 +67,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	}
 	if len(body) > maxModelsResponseBytes {
 		return nil, fmt.Errorf("Arena models response exceeds %d bytes", maxModelsResponseBytes)
+	}
+	if !utf8.Valid(body) {
+		return nil, fmt.Errorf("decode Arena models: invalid UTF-8")
 	}
 
 	var payload modelsResponse

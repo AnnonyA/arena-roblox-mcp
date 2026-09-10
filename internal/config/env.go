@@ -42,6 +42,7 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 	}
 
 	var entries []dotEnvEntry
+	seen := make(map[string]struct{})
 	scanner := bufio.NewScanner(bytes.NewReader(data))
 	lineNo := 0
 	for scanner.Scan() {
@@ -59,6 +60,10 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 		if key == "" {
 			return fmt.Errorf("invalid .env entry on line %d", lineNo)
 		}
+		if _, exists := seen[key]; exists {
+			return fmt.Errorf("duplicate .env key %q on line %d", key, lineNo)
+		}
+		seen[key] = struct{}{}
 		if len(value) > 0 && (value[0] == '"' || value[0] == '\'') {
 			if len(value) < 2 || value[len(value)-1] != value[0] {
 				return fmt.Errorf("invalid .env entry on line %d: unbalanced quotes", lineNo)

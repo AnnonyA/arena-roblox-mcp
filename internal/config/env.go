@@ -37,6 +37,9 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 	if !utf8.Valid(data) {
 		return fmt.Errorf(".env file contains invalid UTF-8")
 	}
+	if bytes.IndexByte(data, 0) >= 0 {
+		return fmt.Errorf(".env file contains NUL byte")
+	}
 
 	var entries []dotEnvEntry
 	scanner := bufio.NewScanner(bytes.NewReader(data))

@@ -29,7 +29,7 @@ func TestDefaultIncludesRobloxStudioMCP(t *testing.T) {
 	if server.Command != "cmd.exe" {
 		t.Fatalf("Command = %q", server.Command)
 	}
-	want := []string{"/c", `%LOCALAPPDATA%\\Roblox\\mcp.bat`}
+	want := []string{"/c", `%LOCALAPPDATA%\Roblox\mcp.bat`}
 	if len(server.Args) != len(want) {
 		t.Fatalf("Args = %#v", server.Args)
 	}

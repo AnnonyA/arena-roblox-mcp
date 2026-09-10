@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -81,6 +82,11 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 		}
 		if len(model.ID) > maxModelIDBytes {
 			return nil, fmt.Errorf("decode Arena models: model id exceeds %d bytes at index %d", maxModelIDBytes, i)
+		}
+		for _, r := range model.ID {
+			if unicode.IsControl(r) {
+				return nil, fmt.Errorf("decode Arena models: model id contains control character at index %d", i)
+			}
 		}
 		if _, ok := seen[model.ID]; ok {
 			return nil, fmt.Errorf("decode Arena models: duplicate model id %q at index %d", model.ID, i)

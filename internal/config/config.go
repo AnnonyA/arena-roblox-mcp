@@ -82,6 +82,7 @@ func Load(path string) (Config, error) {
 	if !utf8.Valid(data) {
 		return Config{}, errors.New("config file must contain valid UTF-8")
 	}
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 || trimmed[0] != '{' {
 		return Config{}, errors.New("config file must contain a JSON object")

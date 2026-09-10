@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 const maxDotEnvBytes = 1 << 20
@@ -27,6 +28,9 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 	}
 	if len(data) > maxDotEnvBytes {
 		return fmt.Errorf(".env file too large (maximum %d bytes)", maxDotEnvBytes)
+	}
+	if !utf8.Valid(data) {
+		return fmt.Errorf(".env file contains invalid UTF-8")
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(data))

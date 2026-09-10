@@ -76,6 +76,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, fmt.Errorf("decode Arena models: %w", err)
 	}
+	if len(payload.Data) == 0 {
+		return nil, fmt.Errorf("decode Arena models: no models returned")
+	}
 	if len(payload.Data) > maxModelCount {
 		return nil, fmt.Errorf("decode Arena models: model count exceeds %d", maxModelCount)
 	}

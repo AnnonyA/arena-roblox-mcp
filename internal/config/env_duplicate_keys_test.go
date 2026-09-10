@@ -1,12 +1,17 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestLoadDotEnvRejectsDuplicateKeysBeforeApplyingVariables(t *testing.T) {
-	path := writeDotEnvFile(t, "ARENA_API_KEY=first\nARENA_API_KEY=second\n")
+	path := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(path, []byte("ARENA_API_KEY=first\nARENA_API_KEY=second\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	setCalls := 0
 	err := LoadDotEnv(path, func(string) (string, bool) {

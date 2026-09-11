@@ -22,6 +22,7 @@ const (
 	maxSSEDataLines                = 4096
 	maxStreamTextBytes             = maxSSEEventBytes
 	maxStreamToolCalls             = 128
+	maxStreamToolCallIDBytes       = 4096
 	maxStreamToolCallNameBytes     = maxSSEEventBytes
 	maxStreamToolCallArgumentBytes = maxSSEEventBytes
 )
@@ -149,6 +150,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 					calls[fragment.Index] = call
 				}
 				if fragment.ID != "" {
+					if len(fragment.ID) > maxStreamToolCallIDBytes {
+						return false, fmt.Errorf("tool call id exceeds %d bytes for index %d", maxStreamToolCallIDBytes, fragment.Index)
+					}
 					if index, ok := callIDs[fragment.ID]; ok && index != fragment.Index {
 						return false, fmt.Errorf("duplicate tool call id %q for indexes %d and %d", fragment.ID, index, fragment.Index)
 					}

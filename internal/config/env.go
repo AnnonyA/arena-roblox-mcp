@@ -45,6 +45,7 @@ func LoadDotEnv(path string, lookup func(string) (string, bool), set func(string
 	var entries []dotEnvEntry
 	seen := make(map[string]struct{})
 	scanner := bufio.NewScanner(bytes.NewReader(data))
+	scanner.Buffer(nil, maxDotEnvBytes+1)
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++

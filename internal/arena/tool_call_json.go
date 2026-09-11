@@ -3,6 +3,7 @@ package arena
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -20,6 +21,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if isBidirectionalFormatting(r) {
 			return fmt.Errorf("tool call id contains bidirectional formatting")
 		}
+	}
+	if strings.TrimSpace(decoded.Function.Name) != decoded.Function.Name {
+		return fmt.Errorf("tool call name contains surrounding whitespace")
 	}
 	for _, r := range decoded.Function.Name {
 		if unicode.IsControl(r) {

@@ -71,6 +71,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if !utf8.Valid(body) {
 		return nil, fmt.Errorf("decode Arena models: invalid UTF-8")
 	}
+	if err := rejectDuplicateStreamJSONKeys(body); err != nil {
+		return nil, fmt.Errorf("decode Arena models: %w", err)
+	}
 
 	var payload modelsResponse
 	if err := json.Unmarshal(body, &payload); err != nil {

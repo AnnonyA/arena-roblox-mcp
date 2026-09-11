@@ -185,9 +185,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				}
 				name := fragment.Function.Name
 				switch {
+				case name == "":
 				case strings.HasPrefix(name, call.Function.Name):
 					call.Function.Name = name
-				case strings.HasPrefix(call.Function.Name, name):
 				default:
 					call.Function.Name += name
 				}

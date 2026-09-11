@@ -23,7 +23,7 @@ const (
 	maxStreamTextBytes             = maxSSEEventBytes
 	maxStreamToolCalls             = 128
 	maxStreamToolCallIDBytes       = 4096
-	maxStreamToolCallNameBytes     = maxSSEEventBytes
+	maxStreamToolCallNameBytes     = 4096
 	maxStreamToolCallArgumentBytes = maxSSEEventBytes
 )
 

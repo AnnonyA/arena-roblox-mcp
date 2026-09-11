@@ -30,6 +30,9 @@ func SaveJournal(path string, journal *Journal) error {
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write session journal: %w", err)
 	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("secure session journal permissions: %w", err)
+	}
 	return nil
 }
 

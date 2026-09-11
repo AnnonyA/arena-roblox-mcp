@@ -16,17 +16,17 @@ import (
 )
 
 const (
-	defaultRetryDelay                       = 200 * time.Millisecond
-	maxRetryDelay                           = time.Minute
-	maxSSEEventBytes                        = 1024 * 1024
-	maxSSELineBytes                         = maxSSEEventBytes + len("data: ") + 1
-	maxSSEDataLines                         = 4096
-	maxStreamTextBytes                      = maxSSEEventBytes
-	maxStreamToolCalls                      = 128
-	maxStreamToolCallIDBytes                = 4096
-	maxStreamToolCallNameBytes              = 4096
-	maxStreamToolCallArgumentBytes          = maxSSEEventBytes
-	maxStreamTotalToolCallArgumentBytes     = maxSSEEventBytes
+	defaultRetryDelay                   = 200 * time.Millisecond
+	maxRetryDelay                       = time.Minute
+	maxSSEEventBytes                    = 1024 * 1024
+	maxSSELineBytes                     = maxSSEEventBytes + len("data: ") + 1
+	maxSSEDataLines                     = 4096
+	maxStreamTextBytes                  = maxSSEEventBytes
+	maxStreamToolCalls                  = 128
+	maxStreamToolCallIDBytes            = 4096
+	maxStreamToolCallNameBytes          = 4096
+	maxStreamToolCallArgumentBytes      = maxSSEEventBytes
+	maxStreamTotalToolCallArgumentBytes = maxSSEEventBytes
 )
 
 type Message struct {
@@ -197,9 +197,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				beforeArgumentBytes := len(call.Function.Arguments)
 				arguments := fragment.Function.Arguments
 				switch {
+				case arguments == "":
 				case strings.HasPrefix(arguments, call.Function.Arguments):
 					call.Function.Arguments = arguments
-				case strings.HasPrefix(call.Function.Arguments, arguments):
 				default:
 					call.Function.Arguments += arguments
 				}

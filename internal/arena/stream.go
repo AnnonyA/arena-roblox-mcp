@@ -106,9 +106,11 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		}
 	}
 	defer resp.Body.Close()
-	mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
-	if err != nil || mediaType != "text/event-stream" {
-		return ChatResult{}, fmt.Errorf("unexpected Arena chat content type %q: want text/event-stream", resp.Header.Get("Content-Type"))
+	if contentType := resp.Header.Get("Content-Type"); contentType != "" {
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil || mediaType != "text/event-stream" {
+			return ChatResult{}, fmt.Errorf("unexpected Arena chat content type %q: want text/event-stream", contentType)
+		}
 	}
 
 	var result ChatResult

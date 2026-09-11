@@ -24,8 +24,14 @@ func SaveJournal(path string, journal *Journal) error {
 		return fmt.Errorf("encode session journal: session journal exceeds %d bytes", maxSessionJournalBytes)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create session journal directory: %w", err)
+	}
+	if dir != "." {
+		if err := os.Chmod(dir, 0o700); err != nil {
+			return fmt.Errorf("secure session journal directory permissions: %w", err)
+		}
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write session journal: %w", err)

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -204,6 +205,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	dataBytes := 0
 	for scanner.Scan() {
 		line := scanner.Text()
+		if !utf8.ValidString(line) {
+			return ChatResult{}, fmt.Errorf("Arena stream contains invalid UTF-8")
+		}
 		if firstLine {
 			line = strings.TrimPrefix(line, "\ufeff")
 			firstLine = false

@@ -16,16 +16,17 @@ import (
 )
 
 const (
-	defaultRetryDelay              = 200 * time.Millisecond
-	maxRetryDelay                  = time.Minute
-	maxSSEEventBytes               = 1024 * 1024
-	maxSSELineBytes                = maxSSEEventBytes + len("data: ") + 1
-	maxSSEDataLines                = 4096
-	maxStreamTextBytes             = maxSSEEventBytes
-	maxStreamToolCalls             = 128
-	maxStreamToolCallIDBytes       = 4096
-	maxStreamToolCallNameBytes     = 4096
-	maxStreamToolCallArgumentBytes = maxSSEEventBytes
+	defaultRetryDelay                       = 200 * time.Millisecond
+	maxRetryDelay                           = time.Minute
+	maxSSEEventBytes                        = 1024 * 1024
+	maxSSELineBytes                         = maxSSEEventBytes + len("data: ") + 1
+	maxSSEDataLines                         = 4096
+	maxStreamTextBytes                      = maxSSEEventBytes
+	maxStreamToolCalls                      = 128
+	maxStreamToolCallIDBytes                = 4096
+	maxStreamToolCallNameBytes              = 4096
+	maxStreamToolCallArgumentBytes          = maxSSEEventBytes
+	maxStreamTotalToolCallArgumentBytes     = maxSSEEventBytes
 )
 
 type Message struct {
@@ -116,6 +117,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	var result ChatResult
 	calls := map[int]*ToolCall{}
 	callIDs := map[string]int{}
+	totalToolCallArgumentBytes := 0
 	processPayload := func(payload string) (bool, error) {
 		if payload == "[DONE]" {
 			return true, nil
@@ -192,6 +194,7 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				if len(call.Function.Name) > maxStreamToolCallNameBytes {
 					return false, fmt.Errorf("tool call name exceeds %d bytes for index %d", maxStreamToolCallNameBytes, fragment.Index)
 				}
+				beforeArgumentBytes := len(call.Function.Arguments)
 				arguments := fragment.Function.Arguments
 				switch {
 				case strings.HasPrefix(arguments, call.Function.Arguments):
@@ -202,6 +205,13 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 				}
 				if len(call.Function.Arguments) > maxStreamToolCallArgumentBytes {
 					return false, fmt.Errorf("tool call arguments exceed %d bytes for index %d", maxStreamToolCallArgumentBytes, fragment.Index)
+				}
+				addedArgumentBytes := len(call.Function.Arguments) - beforeArgumentBytes
+				if addedArgumentBytes > 0 {
+					totalToolCallArgumentBytes += addedArgumentBytes
+					if totalToolCallArgumentBytes > maxStreamTotalToolCallArgumentBytes {
+						return false, fmt.Errorf("total tool call arguments exceed %d bytes", maxStreamTotalToolCallArgumentBytes)
+					}
 				}
 			}
 		}

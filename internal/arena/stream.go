@@ -278,6 +278,9 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 		if !json.Valid([]byte(call.Function.Arguments)) {
 			return ChatResult{}, fmt.Errorf("invalid tool call arguments for index %d", index)
 		}
+		if !strings.HasPrefix(strings.TrimSpace(call.Function.Arguments), "{") {
+			return ChatResult{}, fmt.Errorf("tool call arguments for index %d must be a JSON object", index)
+		}
 		if err := rejectDuplicateStreamJSONKeys([]byte(call.Function.Arguments)); err != nil {
 			return ChatResult{}, fmt.Errorf("invalid tool call arguments for index %d: %w", index, err)
 		}

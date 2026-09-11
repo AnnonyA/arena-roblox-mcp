@@ -11,6 +11,10 @@ import (
 const maxSessionJournalBytes = 16 * 1024 * 1024
 
 func SaveJournal(path string, journal *Journal) error {
+	if journal == nil {
+		return fmt.Errorf("encode session journal: nil session journal")
+	}
+
 	data, err := json.Marshal(journal.Changes())
 	if err != nil {
 		return fmt.Errorf("encode session journal: %w", err)

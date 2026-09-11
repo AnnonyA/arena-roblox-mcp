@@ -32,3 +32,31 @@ func TestSaveJournalTightensExistingFilePermissions(t *testing.T) {
 		t.Fatalf("journal permissions = %o, want 600", got)
 	}
 }
+
+func TestSaveJournalTightensExistingDirectoryPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows directory mode permissions are not POSIX")
+	}
+
+	root := t.TempDir()
+	dir := filepath.Join(root, "sessions")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatalf("seed session directory: %v", err)
+	}
+	path := filepath.Join(dir, "session.json")
+
+	journal := NewJournal()
+	journal.Record(Change{Tool: "edit_script", Resource: "game.ServerScriptService.Main", Reversible: true})
+
+	if err := SaveJournal(path, journal); err != nil {
+		t.Fatalf("SaveJournal() error = %v", err)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("stat session directory: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("session directory permissions = %o, want 700", got)
+	}
+}

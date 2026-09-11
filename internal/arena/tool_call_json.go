@@ -14,6 +14,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return err
 	}
+	if strings.TrimSpace(decoded.ID) != decoded.ID {
+		return fmt.Errorf("tool call id contains surrounding whitespace")
+	}
 	for _, r := range decoded.ID {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call id contains control character")

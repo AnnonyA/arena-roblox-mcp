@@ -33,9 +33,39 @@ func SaveJournal(path string, journal *Journal) error {
 			return fmt.Errorf("secure session journal directory permissions: %w", err)
 		}
 	}
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return fmt.Errorf("write session journal: %w", err)
+
+	tmp, err := os.CreateTemp(dir, ".arena-rbx-journal-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temporary session journal: %w", err)
 	}
+	tmpPath := tmp.Name()
+	keepTemp := true
+	defer func() {
+		if keepTemp {
+			_ = os.Remove(tmpPath)
+		}
+	}()
+
+	if err := tmp.Chmod(0o600); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("secure temporary session journal permissions: %w", err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write temporary session journal: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("sync temporary session journal: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temporary session journal: %w", err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("replace session journal: %w", err)
+	}
+	keepTemp = false
+
 	if err := os.Chmod(path, 0o600); err != nil {
 		return fmt.Errorf("secure session journal permissions: %w", err)
 	}

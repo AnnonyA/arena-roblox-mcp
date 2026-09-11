@@ -3,9 +3,12 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 )
+
+const maxSessionJournalBytes = 16 * 1024 * 1024
 
 func SaveJournal(path string, journal *Journal) error {
 	data, err := json.Marshal(journal.Changes())
@@ -24,9 +27,18 @@ func SaveJournal(path string, journal *Journal) error {
 }
 
 func LoadJournal(path string) (*Journal, error) {
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("read session journal: %w", err)
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(io.LimitReader(f, maxSessionJournalBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read session journal: %w", err)
+	}
+	if len(data) > maxSessionJournalBytes {
+		return nil, fmt.Errorf("read session journal: session journal exceeds %d bytes", maxSessionJournalBytes)
 	}
 
 	var changes []Change

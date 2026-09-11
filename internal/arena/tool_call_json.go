@@ -17,6 +17,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call name contains control character")
 		}
+		if isBidirectionalFormatting(r) {
+			return fmt.Errorf("tool call name contains bidirectional formatting")
+		}
 	}
 	*call = ToolCall(decoded)
 	return nil

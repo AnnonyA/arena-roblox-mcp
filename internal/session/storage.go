@@ -29,6 +29,13 @@ func SaveJournal(path string, journal *Journal) error {
 		return fmt.Errorf("create session journal directory: %w", err)
 	}
 	if dir != "." {
+		info, err := os.Lstat(dir)
+		if err != nil {
+			return fmt.Errorf("inspect session journal directory: %w", err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("secure session journal directory: symbolic links are not allowed")
+		}
 		if err := os.Chmod(dir, 0o700); err != nil {
 			return fmt.Errorf("secure session journal directory permissions: %w", err)
 		}

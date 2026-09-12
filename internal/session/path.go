@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // DataDir returns the directory used for persisted arena-rbx session data.
@@ -12,7 +13,7 @@ func DataDir() (string, error) {
 
 func resolveDataDir(localAppData string, userConfigDir func() (string, error)) (string, error) {
 	base := localAppData
-	if base == "" {
+	if strings.TrimSpace(base) == "" {
 		fallback, err := userConfigDir()
 		if err != nil {
 			return "", err

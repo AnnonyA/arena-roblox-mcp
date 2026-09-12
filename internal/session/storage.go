@@ -73,6 +73,14 @@ func SaveJournal(path string, journal *Journal) error {
 }
 
 func LoadJournal(path string) (*Journal, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, fmt.Errorf("read session journal: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("read session journal: symbolic links are not allowed")
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("read session journal: %w", err)

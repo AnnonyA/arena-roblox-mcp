@@ -25,6 +25,9 @@ func SaveJournal(path string, journal *Journal) error {
 	}
 
 	dir := filepath.Dir(path)
+	if err := rejectSymlinkedDirectoryAncestors(dir); err != nil {
+		return fmt.Errorf("secure session journal directory: %w", err)
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create session journal directory: %w", err)
 	}
@@ -77,6 +80,30 @@ func SaveJournal(path string, journal *Journal) error {
 		return fmt.Errorf("secure session journal permissions: %w", err)
 	}
 	return nil
+}
+
+func rejectSymlinkedDirectoryAncestors(dir string) error {
+	current, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("resolve directory path: %w", err)
+	}
+
+	for {
+		info, err := os.Lstat(current)
+		if err == nil {
+			if info.Mode()&os.ModeSymlink != 0 {
+				return fmt.Errorf("symbolic links are not allowed")
+			}
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("inspect directory %q: %w", current, err)
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			return nil
+		}
+		current = parent
+	}
 }
 
 func LoadJournal(path string) (*Journal, error) {

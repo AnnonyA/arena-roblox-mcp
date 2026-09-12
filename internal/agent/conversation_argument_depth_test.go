@@ -12,7 +12,8 @@ import (
 func TestRunConversationRejectsExcessivelyDeepToolArgumentsBeforeDispatch(t *testing.T) {
 	caller := &conversationToolCaller{}
 	dispatcher := NewToolDispatcher([]string{"script_read"}, caller)
-	arguments := `{"value":` + strings.Repeat(`[`, maxToolArgumentDepth+1) + `null` + strings.Repeat(`]`, maxToolArgumentDepth+1) + `}`
+	const excessiveDepth = 65
+	arguments := `{"value":` + strings.Repeat(`[`, excessiveDepth) + `null` + strings.Repeat(`]`, excessiveDepth) + `}`
 
 	_, err := RunConversation(context.Background(), 1, nil, func(context.Context, []arena.Message) (arena.ChatResult, error) {
 		return arena.ChatResult{ToolCalls: []arena.ToolCall{{

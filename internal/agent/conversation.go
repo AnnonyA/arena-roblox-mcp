@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"strings"
 	"unicode"
 
@@ -103,9 +104,49 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 }
 
 func validToolArguments(arguments string) bool {
-	var object map[string]any
-	if err := json.Unmarshal([]byte(arguments), &object); err != nil {
+	decoder := json.NewDecoder(strings.NewReader(arguments))
+	if !validJSONObject(decoder) {
 		return false
 	}
-	return object != nil
+	_, err := decoder.Token()
+	return errors.Is(err, io.EOF)
+}
+
+func validJSONObject(decoder *json.Decoder) bool {
+	start, err := decoder.Token()
+	if err != nil || start != json.Delim('{') {
+		return false
+	}
+
+	seen := make(map[string]struct{})
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		key, ok := token.(string)
+		if !ok {
+			return false
+		}
+		if _, exists := seen[key]; exists {
+			return false
+		}
+		seen[key] = struct{}{}
+
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return false
+		}
+		if len(value) > 0 && value[0] == '{' {
+			nested := json.NewDecoder(strings.NewReader(string(value)))
+			if !validJSONObject(nested) {
+				return false
+			}
+			if _, err := nested.Token(); !errors.Is(err, io.EOF) {
+				return false
+			}
+		}
+	}
+	end, err := decoder.Token()
+	return err == nil && end == json.Delim('}')
 }

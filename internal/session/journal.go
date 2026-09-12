@@ -2,7 +2,9 @@ package session
 
 import (
 	"errors"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 var (
@@ -64,13 +66,24 @@ func (j *Journal) Diff() string {
 		if diff.Len() > 0 {
 			diff.WriteByte('\n')
 		}
-		diff.WriteString("--- " + change.Resource + " (before)\n")
-		diff.WriteString("+++ " + change.Resource + " (after)\n")
+		resource := safeDiffResourceLabel(change.Resource)
+		diff.WriteString("--- " + resource + " (before)\n")
+		diff.WriteString("+++ " + resource + " (after)\n")
 		diff.WriteString("@@\n")
 		writeDiffLines(&diff, "-", change.Before)
 		writeDiffLines(&diff, "+", change.After)
 	}
 	return diff.String()
+}
+
+func safeDiffResourceLabel(resource string) string {
+	for _, r := range resource {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
+			quoted := strconv.Quote(resource)
+			return quoted[1 : len(quoted)-1]
+		}
+	}
+	return resource
 }
 
 func writeDiffLines(dst *strings.Builder, prefix, content string) {

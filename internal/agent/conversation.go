@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	maxToolCallsPerRound = 32
-	maxToolArgumentDepth = 64
+	maxToolCallsPerRound  = 32
+	maxToolArgumentDepth  = 64
+	maxToolArgumentBytes  = 1 << 20
 )
 
 var (
@@ -107,6 +108,9 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 }
 
 func validToolArguments(arguments string) bool {
+	if len(arguments) > maxToolArgumentBytes {
+		return false
+	}
 	decoder := json.NewDecoder(strings.NewReader(arguments))
 	if !validJSONObject(decoder) {
 		return false

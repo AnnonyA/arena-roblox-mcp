@@ -107,6 +107,10 @@ func rejectSymlinkedDirectoryAncestors(dir string) error {
 }
 
 func LoadJournal(path string) (*Journal, error) {
+	if err := rejectSymlinkedDirectoryAncestors(filepath.Dir(path)); err != nil {
+		return nil, fmt.Errorf("read session journal: %w", err)
+	}
+
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, fmt.Errorf("read session journal: %w", err)

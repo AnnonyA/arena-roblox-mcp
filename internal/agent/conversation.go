@@ -11,7 +11,10 @@ import (
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
 
-const maxToolCallsPerRound = 32
+const (
+	maxToolCallsPerRound = 32
+	maxToolArgumentDepth = 64
+)
 
 var (
 	ErrNoChatRound      = errors.New("chat round is not configured")
@@ -117,10 +120,10 @@ func validJSONObject(decoder *json.Decoder) bool {
 	if err != nil || start != json.Delim('{') {
 		return false
 	}
-	return validJSONObjectContents(decoder)
+	return validJSONObjectContents(decoder, 1)
 }
 
-func validJSONObjectContents(decoder *json.Decoder) bool {
+func validJSONObjectContents(decoder *json.Decoder, depth int) bool {
 	seen := make(map[string]struct{})
 	for decoder.More() {
 		token, err := decoder.Token()
@@ -136,7 +139,7 @@ func validJSONObjectContents(decoder *json.Decoder) bool {
 		}
 		seen[key] = struct{}{}
 
-		if !validJSONValue(decoder) {
+		if !validJSONValue(decoder, depth) {
 			return false
 		}
 	}
@@ -144,7 +147,7 @@ func validJSONObjectContents(decoder *json.Decoder) bool {
 	return err == nil && end == json.Delim('}')
 }
 
-func validJSONValue(decoder *json.Decoder) bool {
+func validJSONValue(decoder *json.Decoder, depth int) bool {
 	token, err := decoder.Token()
 	if err != nil {
 		return false
@@ -154,12 +157,17 @@ func validJSONValue(decoder *json.Decoder) bool {
 		return true
 	}
 
+	nextDepth := depth + 1
+	if nextDepth > maxToolArgumentDepth {
+		return false
+	}
+
 	switch delim {
 	case '{':
-		return validJSONObjectContents(decoder)
+		return validJSONObjectContents(decoder, nextDepth)
 	case '[':
 		for decoder.More() {
-			if !validJSONValue(decoder) {
+			if !validJSONValue(decoder, nextDepth) {
 				return false
 			}
 		}

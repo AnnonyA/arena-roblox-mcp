@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	maxToolCallsPerRound  = 32
-	maxToolArgumentDepth  = 64
-	maxToolArgumentBytes  = 1 << 20
+	maxToolCallsPerRound   = 32
+	maxToolArgumentDepth   = 64
+	maxToolArgumentBytes   = 1 << 20
+	maxToolArgumentValues  = 16384
 )
 
 var (
@@ -112,22 +113,23 @@ func validToolArguments(arguments string) bool {
 		return false
 	}
 	decoder := json.NewDecoder(strings.NewReader(arguments))
-	if !validJSONObject(decoder) {
+	values := 0
+	if !validJSONObject(decoder, &values) {
 		return false
 	}
 	_, err := decoder.Token()
 	return errors.Is(err, io.EOF)
 }
 
-func validJSONObject(decoder *json.Decoder) bool {
+func validJSONObject(decoder *json.Decoder, values *int) bool {
 	start, err := decoder.Token()
 	if err != nil || start != json.Delim('{') {
 		return false
 	}
-	return validJSONObjectContents(decoder, 1)
+	return validJSONObjectContents(decoder, 1, values)
 }
 
-func validJSONObjectContents(decoder *json.Decoder, depth int) bool {
+func validJSONObjectContents(decoder *json.Decoder, depth int, values *int) bool {
 	seen := make(map[string]struct{})
 	for decoder.More() {
 		token, err := decoder.Token()
@@ -142,8 +144,11 @@ func validJSONObjectContents(decoder *json.Decoder, depth int) bool {
 			return false
 		}
 		seen[key] = struct{}{}
+		if !consumeToolArgumentValue(values) {
+			return false
+		}
 
-		if !validJSONValue(decoder, depth) {
+		if !validJSONValue(decoder, depth, values) {
 			return false
 		}
 	}
@@ -151,7 +156,7 @@ func validJSONObjectContents(decoder *json.Decoder, depth int) bool {
 	return err == nil && end == json.Delim('}')
 }
 
-func validJSONValue(decoder *json.Decoder, depth int) bool {
+func validJSONValue(decoder *json.Decoder, depth int, values *int) bool {
 	token, err := decoder.Token()
 	if err != nil {
 		return false
@@ -168,10 +173,10 @@ func validJSONValue(decoder *json.Decoder, depth int) bool {
 
 	switch delim {
 	case '{':
-		return validJSONObjectContents(decoder, nextDepth)
+		return validJSONObjectContents(decoder, nextDepth, values)
 	case '[':
 		for decoder.More() {
-			if !validJSONValue(decoder, nextDepth) {
+			if !consumeToolArgumentValue(values) || !validJSONValue(decoder, nextDepth, values) {
 				return false
 			}
 		}
@@ -180,4 +185,9 @@ func validJSONValue(decoder *json.Decoder, depth int) bool {
 	default:
 		return false
 	}
+}
+
+func consumeToolArgumentValue(values *int) bool {
+	*values++
+	return *values <= maxToolArgumentValues
 }

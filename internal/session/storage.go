@@ -140,6 +140,9 @@ func LoadJournal(path string) (*Journal, error) {
 	if err := json.Unmarshal(data, &changes); err != nil {
 		return nil, fmt.Errorf("decode session journal: %w", err)
 	}
+	if changes == nil {
+		return nil, fmt.Errorf("decode session journal: session journal must be a JSON array")
+	}
 
 	journal := NewJournal()
 	for _, change := range changes {

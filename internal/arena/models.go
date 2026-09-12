@@ -101,6 +101,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 			if unicode.IsControl(r) {
 				return nil, fmt.Errorf("decode Arena models: model id contains control character at index %d", i)
 			}
+			if r == '\u2028' || r == '\u2029' {
+				return nil, fmt.Errorf("decode Arena models: model id contains line separator at index %d", i)
+			}
 			if isBidirectionalFormatting(r) {
 				return nil, fmt.Errorf("decode Arena models: model id contains bidirectional formatting at index %d", i)
 			}

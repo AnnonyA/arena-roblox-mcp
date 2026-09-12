@@ -10,6 +10,8 @@ import (
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
 
+const maxToolCallsPerRound = 32
+
 var (
 	ErrNoChatRound      = errors.New("chat round is not configured")
 	ErrNoToolDispatcher = errors.New("tool dispatcher is not configured")
@@ -37,6 +39,9 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		if len(result.ToolCalls) == 0 {
 			finalText = result.Text
 			return false, nil
+		}
+		if len(result.ToolCalls) > maxToolCallsPerRound {
+			return false, ErrInvalidToolCall
 		}
 		if toolRounds >= maxRounds {
 			return false, ErrMaxToolRounds

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"unicode"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
@@ -46,7 +47,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		seenCallIDs := make(map[string]struct{}, len(result.ToolCalls))
 		for _, call := range result.ToolCalls {
 			trimmedName := strings.TrimSpace(call.Function.Name)
-			if strings.TrimSpace(call.ID) == "" || trimmedName == "" || trimmedName != call.Function.Name || !validToolArguments(call.Function.Arguments) {
+			if strings.TrimSpace(call.ID) == "" || trimmedName == "" || trimmedName != call.Function.Name || strings.IndexFunc(call.Function.Name, unicode.IsControl) >= 0 || strings.IndexFunc(call.Function.Name, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || !validToolArguments(call.Function.Arguments) {
 				return false, ErrInvalidToolCall
 			}
 			if _, exists := seenCallIDs[call.ID]; exists {

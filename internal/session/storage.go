@@ -80,6 +80,9 @@ func LoadJournal(path string) (*Journal, error) {
 	if info.Mode()&os.ModeSymlink != 0 {
 		return nil, fmt.Errorf("read session journal: symbolic links are not allowed")
 	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("read session journal: only regular files are allowed")
+	}
 
 	f, err := os.Open(path)
 	if err != nil {

@@ -45,7 +45,8 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		}
 		seenCallIDs := make(map[string]struct{}, len(result.ToolCalls))
 		for _, call := range result.ToolCalls {
-			if strings.TrimSpace(call.ID) == "" || strings.TrimSpace(call.Function.Name) == "" || !validToolArguments(call.Function.Arguments) {
+			trimmedName := strings.TrimSpace(call.Function.Name)
+			if strings.TrimSpace(call.ID) == "" || trimmedName == "" || trimmedName != call.Function.Name || !validToolArguments(call.Function.Arguments) {
 				return false, ErrInvalidToolCall
 			}
 			if _, exists := seenCallIDs[call.ID]; exists {

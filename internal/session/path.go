@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,9 @@ func resolveDataDir(localAppData string, userConfigDir func() (string, error)) (
 		fallback, err := userConfigDir()
 		if err != nil {
 			return "", err
+		}
+		if strings.TrimSpace(fallback) == "" {
+			return "", errors.New("user config directory is empty")
 		}
 		base = fallback
 	}

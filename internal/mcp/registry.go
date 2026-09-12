@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -72,6 +73,9 @@ func (r *Registry) Tools(ctx context.Context) ([]Tool, error) {
 		if err == nil {
 			err = ctx.Err()
 		}
+		if err == nil {
+			err = validateToolNames(tools)
+		}
 		r.mu.Lock()
 		stale := generation != r.generation
 		if err == nil && !stale {
@@ -97,6 +101,16 @@ func (r *Registry) Invalidate() {
 	r.generation++
 	r.tools = nil
 	r.loaded = false
+}
+func validateToolNames(tools []Tool) error {
+	seen := make(map[string]struct{}, len(tools))
+	for i, tool := range tools {
+		if _, ok := seen[tool.Name]; ok {
+			return fmt.Errorf("duplicate MCP tool name %q at index %d", tool.Name, i)
+		}
+		seen[tool.Name] = struct{}{}
+	}
+	return nil
 }
 func cloneTools(tools []Tool) []Tool {
 	if tools == nil {

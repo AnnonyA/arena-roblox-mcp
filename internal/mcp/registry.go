@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -105,6 +106,9 @@ func (r *Registry) Invalidate() {
 func validateToolNames(tools []Tool) error {
 	seen := make(map[string]struct{}, len(tools))
 	for i, tool := range tools {
+		if strings.TrimSpace(tool.Name) == "" {
+			return fmt.Errorf("blank MCP tool name at index %d", i)
+		}
 		if _, ok := seen[tool.Name]; ok {
 			return fmt.Errorf("duplicate MCP tool name %q at index %d", tool.Name, i)
 		}

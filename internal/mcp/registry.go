@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 var ErrNoDiscoverer = errors.New("mcp tool discoverer is not configured")
@@ -112,6 +113,9 @@ func validateToolNames(tools []Tool) error {
 		}
 		if trimmed != tool.Name {
 			return fmt.Errorf("MCP tool name %q at index %d has surrounding whitespace", tool.Name, i)
+		}
+		if strings.IndexFunc(tool.Name, unicode.IsControl) >= 0 {
+			return fmt.Errorf("MCP tool name %q at index %d contains a control character", tool.Name, i)
 		}
 		if _, ok := seen[tool.Name]; ok {
 			return fmt.Errorf("duplicate MCP tool name %q at index %d", tool.Name, i)

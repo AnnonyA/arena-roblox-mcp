@@ -14,7 +14,7 @@ func TestRunConversationRejectsTooManyToolCallsInSingleRoundBeforeDispatch(t *te
 	dispatcher := NewToolDispatcher([]string{"script_read"}, caller)
 	initial := []arena.Message{{Role: "user", Content: "inspect safely"}}
 
-	calls := make([]arena.ToolCall, maxToolCallsPerRound+1)
+	calls := make([]arena.ToolCall, 33)
 	for i := range calls {
 		calls[i] = arena.ToolCall{
 			ID:   fmt.Sprintf("call-%d", i),

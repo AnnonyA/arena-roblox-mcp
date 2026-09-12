@@ -117,6 +117,9 @@ func validateToolNames(tools []Tool) error {
 		if strings.IndexFunc(tool.Name, unicode.IsControl) >= 0 {
 			return fmt.Errorf("MCP tool name %q at index %d contains a control character", tool.Name, i)
 		}
+		if strings.IndexFunc(tool.Name, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 {
+			return fmt.Errorf("MCP tool name %q at index %d contains a Unicode format character", tool.Name, i)
+		}
 		if _, ok := seen[tool.Name]; ok {
 			return fmt.Errorf("duplicate MCP tool name %q at index %d", tool.Name, i)
 		}

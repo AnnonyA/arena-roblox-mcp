@@ -117,7 +117,10 @@ func validJSONObject(decoder *json.Decoder) bool {
 	if err != nil || start != json.Delim('{') {
 		return false
 	}
+	return validJSONObjectContents(decoder)
+}
 
+func validJSONObjectContents(decoder *json.Decoder) bool {
 	seen := make(map[string]struct{})
 	for decoder.More() {
 		token, err := decoder.Token()
@@ -133,20 +136,36 @@ func validJSONObject(decoder *json.Decoder) bool {
 		}
 		seen[key] = struct{}{}
 
-		var value json.RawMessage
-		if err := decoder.Decode(&value); err != nil {
+		if !validJSONValue(decoder) {
 			return false
-		}
-		if len(value) > 0 && value[0] == '{' {
-			nested := json.NewDecoder(strings.NewReader(string(value)))
-			if !validJSONObject(nested) {
-				return false
-			}
-			if _, err := nested.Token(); !errors.Is(err, io.EOF) {
-				return false
-			}
 		}
 	}
 	end, err := decoder.Token()
 	return err == nil && end == json.Delim('}')
+}
+
+func validJSONValue(decoder *json.Decoder) bool {
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok {
+		return true
+	}
+
+	switch delim {
+	case '{':
+		return validJSONObjectContents(decoder)
+	case '[':
+		for decoder.More() {
+			if !validJSONValue(decoder) {
+				return false
+			}
+		}
+		end, err := decoder.Token()
+		return err == nil && end == json.Delim(']')
+	default:
+		return false
+	}
 }

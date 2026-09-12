@@ -48,7 +48,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		for _, call := range result.ToolCalls {
 			trimmedID := strings.TrimSpace(call.ID)
 			trimmedName := strings.TrimSpace(call.Function.Name)
-			if trimmedID == "" || trimmedID != call.ID || trimmedName == "" || trimmedName != call.Function.Name || strings.IndexFunc(call.Function.Name, unicode.IsControl) >= 0 || strings.IndexFunc(call.Function.Name, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || !validToolArguments(call.Function.Arguments) {
+			if trimmedID == "" || trimmedID != call.ID || strings.IndexFunc(call.ID, unicode.IsControl) >= 0 || strings.IndexFunc(call.ID, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || trimmedName == "" || trimmedName != call.Function.Name || strings.IndexFunc(call.Function.Name, unicode.IsControl) >= 0 || strings.IndexFunc(call.Function.Name, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || !validToolArguments(call.Function.Arguments) {
 				return false, ErrInvalidToolCall
 			}
 			if _, exists := seenCallIDs[call.ID]; exists {

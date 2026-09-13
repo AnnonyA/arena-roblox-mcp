@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -112,6 +113,11 @@ func Load(path string) (Config, error) {
 		cfg.Arena.APIKeyEnv = "ARENA_API_KEY"
 	}
 	cfg.Arena.Model = strings.TrimSpace(cfg.Arena.Model)
+	for _, r := range cfg.Arena.Model {
+		if unicode.IsControl(r) {
+			return Config{}, errors.New("arena.model must not contain control characters")
+		}
+	}
 	if cfg.Agent.MaxToolRounds <= 0 {
 		cfg.Agent.MaxToolRounds = 12
 	}

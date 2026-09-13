@@ -58,7 +58,7 @@ func Default() Config {
 				Command: "cmd.exe",
 				Args: []string{
 					"/c",
-					`%LOCALAPPDATA%\\Roblox\\mcp.bat`,
+					`%LOCALAPPDATA%\Roblox\mcp.bat`,
 				},
 			},
 		},

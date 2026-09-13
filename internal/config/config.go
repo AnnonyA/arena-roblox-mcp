@@ -128,6 +128,9 @@ func Load(path string) (Config, error) {
 	}
 	for i, fallback := range cfg.Arena.Fallbacks {
 		fallback = strings.TrimSpace(fallback)
+		if fallback == "" {
+			return Config{}, fmt.Errorf("arena.fallbacks[%d] must not be empty", i)
+		}
 		for _, r := range fallback {
 			if unicode.IsControl(r) {
 				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain control characters", i)

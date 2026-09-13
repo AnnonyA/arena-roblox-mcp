@@ -107,7 +107,7 @@ func Load(path string) (Config, error) {
 		}
 		return Config{}, err
 	}
-	if cfg.Arena.APIKeyEnv == "" {
+	if strings.TrimSpace(cfg.Arena.APIKeyEnv) == "" {
 		cfg.Arena.APIKeyEnv = "ARENA_API_KEY"
 	}
 	if cfg.Agent.MaxToolRounds <= 0 {

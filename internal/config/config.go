@@ -10,7 +10,10 @@ import (
 	"unicode/utf8"
 )
 
-const maxConfigFileBytes = 1 << 20
+const (
+	maxConfigFileBytes      = 1 << 20
+	maxConfiguredToolRounds = 128
+)
 
 type Config struct {
 	Arena      ArenaConfig                `json:"arena"`
@@ -107,6 +110,9 @@ func Load(path string) (Config, error) {
 	}
 	if cfg.Agent.MaxToolRounds <= 0 {
 		cfg.Agent.MaxToolRounds = 12
+	}
+	if cfg.Agent.MaxToolRounds > maxConfiguredToolRounds {
+		return Config{}, fmt.Errorf("agent.maxToolRounds must not exceed %d", maxConfiguredToolRounds)
 	}
 	if cfg.Agent.ContextBudget == "" {
 		cfg.Agent.ContextBudget = "balanced"

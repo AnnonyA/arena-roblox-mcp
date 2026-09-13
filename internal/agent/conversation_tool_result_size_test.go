@@ -54,3 +54,17 @@ func TestRunConversationCompactsOversizedToolResultBeforeNextArenaRound(t *testi
 		t.Fatalf("compacted tool result is not valid UTF-8")
 	}
 }
+
+func TestCompactToolResultSanitizesInvalidUTF8(t *testing.T) {
+	content := compactToolResult(json.RawMessage{'o', 'k', 0xff})
+
+	if !strings.HasPrefix(content, "ok") {
+		t.Fatalf("compacted tool result = %q, want preserved valid prefix", content)
+	}
+	if !utf8.ValidString(content) {
+		t.Fatalf("compacted tool result is not valid UTF-8")
+	}
+	if len(content) > maxToolResultBytes {
+		t.Fatalf("tool result bytes = %d, want at most %d", len(content), maxToolResultBytes)
+	}
+}

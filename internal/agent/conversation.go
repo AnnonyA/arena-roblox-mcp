@@ -12,10 +12,12 @@ import (
 )
 
 const (
-	maxToolCallsPerRound   = 32
-	maxToolArgumentDepth   = 64
-	maxToolArgumentBytes   = 1 << 20
-	maxToolArgumentValues  = 16384
+	maxToolCallsPerRound  = 32
+	maxToolCallIDBytes    = 256
+	maxToolCallNameBytes  = 256
+	maxToolArgumentDepth  = 64
+	maxToolArgumentBytes  = 1 << 20
+	maxToolArgumentValues = 16384
 )
 
 var (
@@ -59,7 +61,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		for _, call := range result.ToolCalls {
 			trimmedID := strings.TrimSpace(call.ID)
 			trimmedName := strings.TrimSpace(call.Function.Name)
-			if trimmedID == "" || trimmedID != call.ID || strings.IndexFunc(call.ID, unicode.IsControl) >= 0 || strings.IndexFunc(call.ID, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || trimmedName == "" || trimmedName != call.Function.Name || strings.IndexFunc(call.Function.Name, unicode.IsControl) >= 0 || strings.IndexFunc(call.Function.Name, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || !validToolArguments(call.Function.Arguments) {
+			if trimmedID == "" || trimmedID != call.ID || len(call.ID) > maxToolCallIDBytes || strings.IndexFunc(call.ID, unicode.IsControl) >= 0 || strings.IndexFunc(call.ID, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || trimmedName == "" || trimmedName != call.Function.Name || len(call.Function.Name) > maxToolCallNameBytes || strings.IndexFunc(call.Function.Name, unicode.IsControl) >= 0 || strings.IndexFunc(call.Function.Name, func(r rune) bool { return unicode.Is(unicode.Cf, r) }) >= 0 || !validToolArguments(call.Function.Arguments) {
 				return false, ErrInvalidToolCall
 			}
 			if _, exists := seenCallIDs[call.ID]; exists {

@@ -115,15 +115,19 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 }
 
 func compactToolResult(content json.RawMessage) string {
-	if len(content) <= maxToolResultBytes {
-		return string(content)
+	contentText := string(content)
+	if !utf8.ValidString(contentText) {
+		contentText = strings.ToValidUTF8(contentText, "\uFFFD")
+	}
+	if len(contentText) <= maxToolResultBytes {
+		return contentText
 	}
 
 	limit := maxToolResultBytes - len(toolResultTruncationMarker)
-	for limit > 0 && !utf8.RuneStart(content[limit]) {
+	for limit > 0 && !utf8.RuneStart(contentText[limit]) {
 		limit--
 	}
-	return string(content[:limit]) + toolResultTruncationMarker
+	return contentText[:limit] + toolResultTruncationMarker
 }
 
 func validToolArguments(arguments string) bool {

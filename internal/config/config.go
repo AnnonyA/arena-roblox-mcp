@@ -63,7 +63,6 @@ func Default() Config {
 					`%LOCALAPPDATA%\Roblox\mcp.bat`,
 				},
 			},
-		},
 	}
 }
 
@@ -127,7 +126,13 @@ func Load(path string) (Config, error) {
 		}
 	}
 	for i, fallback := range cfg.Arena.Fallbacks {
-		cfg.Arena.Fallbacks[i] = strings.TrimSpace(fallback)
+		fallback = strings.TrimSpace(fallback)
+		for _, r := range fallback {
+			if unicode.IsControl(r) {
+				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain control characters", i)
+			}
+		}
+		cfg.Arena.Fallbacks[i] = fallback
 	}
 	if cfg.Agent.MaxToolRounds <= 0 {
 		cfg.Agent.MaxToolRounds = 12

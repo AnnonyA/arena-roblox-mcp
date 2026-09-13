@@ -63,6 +63,7 @@ func Default() Config {
 					`%LOCALAPPDATA%\Roblox\mcp.bat`,
 				},
 			},
+		},
 	}
 }
 

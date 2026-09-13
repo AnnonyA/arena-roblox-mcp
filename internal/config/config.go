@@ -118,9 +118,11 @@ func Load(path string) (Config, error) {
 		return Config{}, fmt.Errorf("agent.maxToolRounds must not exceed %d", maxConfiguredToolRounds)
 	}
 	for name, server := range cfg.MCPServers {
-		if strings.TrimSpace(server.Command) == "" {
+		server.Command = strings.TrimSpace(server.Command)
+		if server.Command == "" {
 			return Config{}, fmt.Errorf("mcpServers.%s.command must not be empty", name)
 		}
+		cfg.MCPServers[name] = server
 	}
 	if cfg.Agent.ContextBudget == "" {
 		cfg.Agent.ContextBudget = "balanced"

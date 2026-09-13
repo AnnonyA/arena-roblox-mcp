@@ -145,6 +145,11 @@ func Load(path string) (Config, error) {
 		return Config{}, fmt.Errorf("agent.maxToolRounds must not exceed %d", maxConfiguredToolRounds)
 	}
 	for name, server := range cfg.MCPServers {
+		for _, r := range name {
+			if unicode.IsControl(r) {
+				return Config{}, errors.New("mcpServers server name must not contain control characters")
+			}
+		}
 		server.Command = strings.TrimSpace(server.Command)
 		if server.Command == "" {
 			return Config{}, fmt.Errorf("mcpServers.%s.command must not be empty", name)

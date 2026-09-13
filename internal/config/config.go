@@ -126,6 +126,9 @@ func Load(path string) (Config, error) {
 			return Config{}, errors.New("arena.model must not contain control characters")
 		}
 	}
+	for i, fallback := range cfg.Arena.Fallbacks {
+		cfg.Arena.Fallbacks[i] = strings.TrimSpace(fallback)
+	}
 	if cfg.Agent.MaxToolRounds <= 0 {
 		cfg.Agent.MaxToolRounds = 12
 	}

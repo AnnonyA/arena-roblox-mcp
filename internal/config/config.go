@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -114,6 +115,11 @@ func Load(path string) (Config, error) {
 	}
 	if cfg.Agent.MaxToolRounds > maxConfiguredToolRounds {
 		return Config{}, fmt.Errorf("agent.maxToolRounds must not exceed %d", maxConfiguredToolRounds)
+	}
+	for name, server := range cfg.MCPServers {
+		if strings.TrimSpace(server.Command) == "" {
+			return Config{}, fmt.Errorf("mcpServers.%s.command must not be empty", name)
+		}
 	}
 	if cfg.Agent.ContextBudget == "" {
 		cfg.Agent.ContextBudget = "balanced"

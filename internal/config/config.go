@@ -122,6 +122,14 @@ func Load(path string) (Config, error) {
 		if server.Command == "" {
 			return Config{}, fmt.Errorf("mcpServers.%s.command must not be empty", name)
 		}
+		if strings.ContainsRune(server.Command, '\x00') {
+			return Config{}, fmt.Errorf("mcpServers.%s.command must not contain NUL", name)
+		}
+		for i, arg := range server.Args {
+			if strings.ContainsRune(arg, '\x00') {
+				return Config{}, fmt.Errorf("mcpServers.%s.args[%d] must not contain NUL", name, i)
+			}
+		}
 		cfg.MCPServers[name] = server
 	}
 	if cfg.Agent.ContextBudget == "" {

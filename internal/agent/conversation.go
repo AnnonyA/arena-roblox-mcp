@@ -71,67 +71,121 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		}
 		toolRounds++
 
-		conversation = append(conversation, arena.Message{Role: "assistant", Content: result.Text, ToolCalls: append([]arena.ToolCall(nil), result.ToolCalls...)})
+		conversation = append(conversation, arena.Message{
+			Role:      "assistant",
+			Content:   result.Text,
+			ToolCalls: append([]arena.ToolCall(nil), result.ToolCalls...),
+		})
 		for _, call := range result.ToolCalls {
 			toolResult, err := dispatcher.Dispatch(ctx, call.Function.Name, json.RawMessage(call.Function.Arguments))
 			var content json.RawMessage
 			if err != nil {
-				if ctxErr := ctx.Err(); ctxErr != nil { return false, ctxErr }
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return false, ctxErr
+				}
 				content, err = json.Marshal(map[string]string{"error": err.Error()})
-				if err != nil { return false, err }
+				if err != nil {
+					return false, err
+				}
 			} else {
 				content = toolResult.StructuredContent
-				if len(content) == 0 { content = toolResult.Content }
-				if len(content) == 0 { content = json.RawMessage("null") }
+				if len(content) == 0 {
+					content = toolResult.Content
+				}
+				if len(content) == 0 {
+					content = json.RawMessage("null")
+				}
 			}
-			conversation = append(conversation, arena.Message{Role: "tool", Content: string(content), ToolCallID: call.ID})
+			conversation = append(conversation, arena.Message{
+				Role:       "tool",
+				Content:    string(content),
+				ToolCallID: call.ID,
+			})
 		}
 		return true, nil
 	})
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	return finalText, nil
 }
 
 func validToolArguments(arguments string) bool {
-	if len(arguments) > maxToolArgumentBytes { return false }
+	if len(arguments) > maxToolArgumentBytes {
+		return false
+	}
 	decoder := json.NewDecoder(strings.NewReader(arguments))
 	values := 0
-	if !validJSONObject(decoder, &values) { return false }
+	if !validJSONObject(decoder, &values) {
+		return false
+	}
 	_, err := decoder.Token()
 	return errors.Is(err, io.EOF)
 }
 
 func validJSONObject(decoder *json.Decoder, values *int) bool {
 	start, err := decoder.Token()
-	if err != nil || start != json.Delim('{') { return false }
+	if err != nil || start != json.Delim('{') {
+		return false
+	}
 	return validJSONObjectContents(decoder, 1, values)
 }
 
 func validJSONObjectContents(decoder *json.Decoder, depth int, values *int) bool {
 	seen := make(map[string]struct{})
 	for decoder.More() {
-		token, err := decoder.Token(); if err != nil { return false }
-		key, ok := token.(string); if !ok { return false }
-		if _, exists := seen[key]; exists { return false }
+		token, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		key, ok := token.(string)
+		if !ok {
+			return false
+		}
+		if _, exists := seen[key]; exists {
+			return false
+		}
 		seen[key] = struct{}{}
-		if !consumeToolArgumentValue(values) { return false }
-		if !validJSONValue(decoder, depth, values) { return false }
+		if !consumeToolArgumentValue(values) {
+			return false
+		}
+
+		if !validJSONValue(decoder, depth, values) {
+			return false
+		}
 	}
 	end, err := decoder.Token()
 	return err == nil && end == json.Delim('}')
 }
 
 func validJSONValue(decoder *json.Decoder, depth int, values *int) bool {
-	token, err := decoder.Token(); if err != nil { return false }
-	delim, ok := token.(json.Delim); if !ok { return true }
+	token, err := decoder.Token()
+	if err != nil {
+		return false
+	}
+	delim, ok := token.(json.Delim)
+	if !ok {
+		return true
+	}
+
 	nextDepth := depth + 1
-	if nextDepth > maxToolArgumentDepth { return false }
+	if nextDepth > maxToolArgumentDepth {
+		return false
+	}
+
 	switch delim {
-	case '{': return validJSONObjectContents(decoder, nextDepth, values)
+	case '{':
+		return validJSONObjectContents(decoder, nextDepth, values)
 	case '[':
-		for decoder.More() { if !consumeToolArgumentValue(values) || !validJSONValue(decoder, nextDepth, values) { return false } }
-		end, err := decoder.Token(); return err == nil && end == json.Delim(']')
-	default: return false
+		for decoder.More() {
+			if !consumeToolArgumentValue(values) || !validJSONValue(decoder, nextDepth, values) {
+				return false
+			}
+		}
+		end, err := decoder.Token()
+		return err == nil && end == json.Delim(']')
+	default:
+		return false
 	}
 }
 

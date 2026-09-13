@@ -19,6 +19,9 @@ const (
 	maxToolArgumentDepth  = 64
 	maxToolArgumentBytes  = 1 << 20
 	maxToolArgumentValues = 16384
+	maxToolResultBytes    = 256 << 10
+
+	toolResultTruncationMarker = "… [tool result truncated]"
 )
 
 var (
@@ -99,7 +102,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 			}
 			conversation = append(conversation, arena.Message{
 				Role:       "tool",
-				Content:    string(content),
+				Content:    compactToolResult(content),
 				ToolCallID: call.ID,
 			})
 		}
@@ -109,6 +112,18 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 		return "", err
 	}
 	return finalText, nil
+}
+
+func compactToolResult(content json.RawMessage) string {
+	if len(content) <= maxToolResultBytes {
+		return string(content)
+	}
+
+	limit := maxToolResultBytes - len(toolResultTruncationMarker)
+	for limit > 0 && !utf8.RuneStart(content[limit]) {
+		limit--
+	}
+	return string(content[:limit]) + toolResultTruncationMarker
 }
 
 func validToolArguments(arguments string) bool {

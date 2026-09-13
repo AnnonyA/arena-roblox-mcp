@@ -112,6 +112,11 @@ func Load(path string) (Config, error) {
 	if cfg.Arena.APIKeyEnv == "" {
 		cfg.Arena.APIKeyEnv = "ARENA_API_KEY"
 	}
+	for _, r := range cfg.Arena.APIKeyEnv {
+		if unicode.IsControl(r) {
+			return Config{}, errors.New("arena.apiKeyEnv must not contain control characters")
+		}
+	}
 	cfg.Arena.Model = strings.TrimSpace(cfg.Arena.Model)
 	for _, r := range cfg.Arena.Model {
 		if unicode.IsControl(r) {

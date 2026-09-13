@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
 )
@@ -111,7 +112,7 @@ func RunConversation(ctx context.Context, maxRounds int, messages []arena.Messag
 }
 
 func validToolArguments(arguments string) bool {
-	if len(arguments) > maxToolArgumentBytes {
+	if len(arguments) > maxToolArgumentBytes || !utf8.ValidString(arguments) {
 		return false
 	}
 	decoder := json.NewDecoder(strings.NewReader(arguments))

@@ -12,6 +12,7 @@ import (
 
 const (
 	maxConfigFileBytes      = 1 << 20
+	maxConfigJSONDepth      = 64
 	maxConfiguredToolRounds = 128
 )
 
@@ -122,10 +123,10 @@ func Load(path string) (Config, error) {
 
 func rejectDuplicateJSONKeys(data []byte) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
-	return scanJSONValue(decoder)
+	return scanJSONValue(decoder, 0)
 }
 
-func scanJSONValue(decoder *json.Decoder) error {
+func scanJSONValue(decoder *json.Decoder, depth int) error {
 	token, err := decoder.Token()
 	if err != nil {
 		return err
@@ -134,6 +135,11 @@ func scanJSONValue(decoder *json.Decoder) error {
 	delim, ok := token.(json.Delim)
 	if !ok {
 		return nil
+	}
+
+	depth++
+	if depth > maxConfigJSONDepth {
+		return errors.New("config file JSON is nested too deeply")
 	}
 
 	switch delim {
@@ -152,7 +158,7 @@ func scanJSONValue(decoder *json.Decoder) error {
 				return fmt.Errorf("config file contains duplicate JSON key %q", key)
 			}
 			seen[key] = struct{}{}
-			if err := scanJSONValue(decoder); err != nil {
+			if err := scanJSONValue(decoder, depth); err != nil {
 				return err
 			}
 		}
@@ -160,7 +166,7 @@ func scanJSONValue(decoder *json.Decoder) error {
 		return err
 	case '[':
 		for decoder.More() {
-			if err := scanJSONValue(decoder); err != nil {
+			if err := scanJSONValue(decoder, depth); err != nil {
 				return err
 			}
 		}

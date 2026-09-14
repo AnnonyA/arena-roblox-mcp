@@ -18,6 +18,8 @@ func TestStudioCommandFiltersUnsafeDiscoveredSessionMetadata(t *testing.T) {
 			{ID: "studio-safe", Name: "Safe", PlaceID: "100"},
 			{ID: "studio-escape\x1b[31m", Name: "Unsafe", PlaceID: "200"},
 			{ID: "studio-zero\u200bwidth", Name: "Unsafe", PlaceID: "300"},
+			{ID: "studio-name", Name: "Unsafe\x1b[31m", PlaceID: "400"},
+			{ID: "studio-place", Name: "Unsafe", PlaceID: "500\u200b"},
 		}, nil
 	}
 

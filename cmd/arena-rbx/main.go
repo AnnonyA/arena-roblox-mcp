@@ -92,6 +92,9 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 		if unicode.IsControl(r) {
 			return errors.New("model ID must not contain control characters")
 		}
+		if unicode.Is(unicode.Cf, r) {
+			return errors.New("model ID must not contain Unicode format characters")
+		}
 	}
 	cfg.Arena.Model = modelName
 

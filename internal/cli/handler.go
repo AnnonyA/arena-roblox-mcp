@@ -101,10 +101,11 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			tools, err := actions.Tools(ctx); if err != nil { return false, err }
 			if out == nil { return false, errors.New("cli: nil output") }
 			if len(tools) == 0 { _, err = io.WriteString(out, "No MCP tools available.\n"); return false, err }
+			safeTools := make([]string, len(tools))
 			for i := range tools {
-				tools[i] = safeDisplayText(tools[i])
+				safeTools[i] = safeDisplayText(tools[i])
 			}
-			_, err = io.WriteString(out, strings.Join(tools, "\n")+"\n"); return false, err
+			_, err = io.WriteString(out, strings.Join(safeTools, "\n")+"\n"); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "history" && actions.History != nil {
 			history, err := actions.History(ctx); if err != nil { return false, err }

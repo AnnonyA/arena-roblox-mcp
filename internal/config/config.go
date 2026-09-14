@@ -182,6 +182,9 @@ func Load(path string) (Config, error) {
 			if unicode.IsControl(r) {
 				return Config{}, fmt.Errorf("mcpServers.%s.command must not contain control characters", name)
 			}
+			if r == '\u2028' || r == '\u2029' {
+				return Config{}, fmt.Errorf("mcpServers.%s.command must not contain line separators", name)
+			}
 			if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 				return Config{}, fmt.Errorf("mcpServers.%s.command must not contain bidirectional formatting", name)
 			}
@@ -190,6 +193,9 @@ func Load(path string) (Config, error) {
 			for _, r := range arg {
 				if unicode.IsControl(r) {
 					return Config{}, fmt.Errorf("mcpServers.%s.args[%d] must not contain control characters", name, i)
+				}
+				if r == '\u2028' || r == '\u2029' {
+					return Config{}, fmt.Errorf("mcpServers.%s.args[%d] must not contain line separators", name, i)
 				}
 				if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 					return Config{}, fmt.Errorf("mcpServers.%s.args[%d] must not contain bidirectional formatting", name, i)

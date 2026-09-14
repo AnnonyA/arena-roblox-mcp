@@ -193,9 +193,12 @@ func Load(path string) (Config, error) {
 				return Config{}, errors.New("mcpServers server name must not contain Unicode format characters")
 			}
 		}
-		server.Command = strings.TrimSpace(server.Command)
-		if server.Command == "" {
+		trimmedCommand := strings.TrimSpace(server.Command)
+		if trimmedCommand == "" {
 			return Config{}, fmt.Errorf("mcpServers.%s.command must not be empty", name)
+		}
+		if trimmedCommand != server.Command {
+			return Config{}, fmt.Errorf("mcpServers.%s.command must not have surrounding whitespace", name)
 		}
 		for _, r := range server.Command {
 			if unicode.IsControl(r) {

@@ -18,10 +18,12 @@ func (c *Context) Add(event Event) {
 	if c.capacity <= 0 {
 		return
 	}
-	c.events = append(c.events, event)
-	if len(c.events) > c.capacity {
-		c.events = append([]Event(nil), c.events[len(c.events)-c.capacity:]...)
+	if len(c.events) < c.capacity {
+		c.events = append(c.events, event)
+		return
 	}
+	copy(c.events, c.events[1:])
+	c.events[len(c.events)-1] = event
 }
 
 func (c *Context) Clear() {

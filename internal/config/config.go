@@ -185,6 +185,9 @@ func Load(path string) (Config, error) {
 			if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 				return Config{}, errors.New("mcpServers server name must not contain bidirectional formatting")
 			}
+			if unicode.Is(unicode.Cf, r) {
+				return Config{}, errors.New("mcpServers server name must not contain Unicode format characters")
+			}
 		}
 		server.Command = strings.TrimSpace(server.Command)
 		if server.Command == "" {
@@ -200,6 +203,9 @@ func Load(path string) (Config, error) {
 			if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 				return Config{}, fmt.Errorf("mcpServers.%s.command must not contain bidirectional formatting", name)
 			}
+			if unicode.Is(unicode.Cf, r) {
+				return Config{}, fmt.Errorf("mcpServers.%s.command must not contain Unicode format characters", name)
+			}
 		}
 		for i, arg := range server.Args {
 			for _, r := range arg {
@@ -211,6 +217,9 @@ func Load(path string) (Config, error) {
 				}
 				if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 					return Config{}, fmt.Errorf("mcpServers.%s.args[%d] must not contain bidirectional formatting", name, i)
+				}
+				if unicode.Is(unicode.Cf, r) {
+					return Config{}, fmt.Errorf("mcpServers.%s.args[%d] must not contain Unicode format characters", name, i)
 				}
 			}
 		}

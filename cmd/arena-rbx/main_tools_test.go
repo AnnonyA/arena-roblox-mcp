@@ -29,6 +29,26 @@ func TestRunWithToolDependenciesToolsCommandListsAvailableMCPTools(t *testing.T)
 	}
 }
 
+func TestRunWithToolDependenciesToolsCommandSanitizesUnsafeDisplayCharacters(t *testing.T) {
+	in := strings.NewReader("/tools\n/exit\n")
+	var out bytes.Buffer
+
+	listTools := func(context.Context) ([]string, error) {
+		return []string{"script.read — Read\x1b[31m hidden\u200b text"}, nil
+	}
+	if err := runWithToolDependencies(context.Background(), in, &out, nil, nil, listTools, nil); err != nil {
+		t.Fatalf("runWithToolDependencies() error = %v", err)
+	}
+
+	got := out.String()
+	if strings.ContainsRune(got, '\x1b') || strings.ContainsRune(got, '\u200b') {
+		t.Fatalf("tools command emitted unsafe display characters: %q", got)
+	}
+	if !strings.Contains(got, "script.read — Read[31m hidden text\n") {
+		t.Fatalf("tools command did not preserve safe tool text: %q", got)
+	}
+}
+
 func TestRunWithToolDependenciesToolsCommandReportsEmptyRegistry(t *testing.T) {
 	in := strings.NewReader("/tools\n/exit\n")
 	var out bytes.Buffer

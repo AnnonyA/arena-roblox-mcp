@@ -30,7 +30,7 @@ func NewCommandHandlerWithClear(out io.Writer, clear func(), next InputHandler) 
 }
 
 func safeModelIDs(models []string) []string {
-	safe := models[:0]
+	safe := make([]string, 0, len(models))
 	for _, model := range models {
 		unsafe := false
 		for _, r := range model {

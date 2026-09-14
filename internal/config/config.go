@@ -228,6 +228,7 @@ func scanJSONValue(decoder *json.Decoder, depth int) error {
 			if err := scanJSONValue(decoder, depth); err != nil {
 				return err
 			}
+		}
 		_, err := decoder.Token()
 		return err
 	default:

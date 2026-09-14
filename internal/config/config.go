@@ -159,6 +159,9 @@ func Load(path string) (Config, error) {
 			if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain bidirectional formatting", i)
 			}
+			if unicode.Is(unicode.Cf, r) {
+				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain Unicode format characters", i)
+			}
 		}
 		cfg.Arena.Fallbacks[i] = fallback
 	}

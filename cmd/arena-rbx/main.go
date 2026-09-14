@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/agent"
 	"github.com/AnnonyA/arena-roblox-mcp/internal/arena"
@@ -86,6 +87,11 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 	modelName := strings.TrimSpace(*model)
 	if modelName == "" {
 		modelName = strings.TrimSpace(cfg.Arena.Model)
+	}
+	for _, r := range modelName {
+		if unicode.IsControl(r) {
+			return errors.New("model ID must not contain control characters")
+		}
 	}
 	cfg.Arena.Model = modelName
 

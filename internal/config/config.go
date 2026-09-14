@@ -144,6 +144,9 @@ func Load(path string) (Config, error) {
 			if unicode.IsControl(r) {
 				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain control characters", i)
 			}
+			if r == '\u2028' || r == '\u2029' {
+				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain line separators", i)
+			}
 			if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
 				return Config{}, fmt.Errorf("arena.fallbacks[%d] must not contain bidirectional formatting", i)
 			}

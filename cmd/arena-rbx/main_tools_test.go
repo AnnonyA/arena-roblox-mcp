@@ -49,6 +49,24 @@ func TestRunWithToolDependenciesToolsCommandSanitizesUnsafeDisplayCharacters(t *
 	}
 }
 
+func TestRunWithToolDependenciesToolsCommandDoesNotMutateToolList(t *testing.T) {
+	in := strings.NewReader("/tools\n/exit\n")
+	var out bytes.Buffer
+	tools := []string{"script.read — Read\x1b[31m hidden\u200b text"}
+	original := tools[0]
+
+	listTools := func(context.Context) ([]string, error) {
+		return tools, nil
+	}
+	if err := runWithToolDependencies(context.Background(), in, &out, nil, nil, listTools, nil); err != nil {
+		t.Fatalf("runWithToolDependencies() error = %v", err)
+	}
+
+	if tools[0] != original {
+		t.Fatalf("tools command mutated caller-owned tool list: got %q, want %q", tools[0], original)
+	}
+}
+
 func TestRunWithToolDependenciesToolsCommandReportsEmptyRegistry(t *testing.T) {
 	in := strings.NewReader("/tools\n/exit\n")
 	var out bytes.Buffer

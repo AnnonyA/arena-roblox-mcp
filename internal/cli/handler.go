@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"unicode"
 )
 
 type CommandActions struct {
@@ -28,6 +29,23 @@ func NewCommandHandlerWithClear(out io.Writer, clear func(), next InputHandler) 
 	return NewCommandHandlerWithActions(out, CommandActions{Clear: clear}, next)
 }
 
+func safeModelIDs(models []string) []string {
+	safe := make([]string, 0, len(models))
+	for _, model := range models {
+		unsafe := false
+		for _, r := range model {
+			if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+				unsafe = true
+				break
+			}
+		}
+		if !unsafe {
+			safe = append(safe, model)
+		}
+	}
+	return safe
+}
+
 func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next InputHandler) InputHandler {
 	arenaConnected := false
 	return func(ctx context.Context, input Input) (bool, error) {
@@ -45,6 +63,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		}
 		if input.Kind == InputCommand && input.Command == "models" && actions.Models != nil {
 			models, err := actions.Models(ctx); if err != nil { return false, err }
+			models = safeModelIDs(models)
 			arenaConnected = true
 			if out == nil { return false, errors.New("cli: nil output") }
 			if len(models) == 0 { _, err = io.WriteString(out, "No Arena models available.\n"); return false, err }
@@ -56,6 +75,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 				if actions.Model != nil { return false, actions.Model(ctx, input.Argument) }
 				return false, err
 			}
+			models = safeModelIDs(models)
 			arenaConnected = true
 			if out == nil { return false, errors.New("cli: nil output") }
 			if len(models) == 0 { _, err = io.WriteString(out, "No Arena models available.\n"); return false, err }

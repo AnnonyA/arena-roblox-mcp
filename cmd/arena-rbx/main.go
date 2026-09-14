@@ -147,7 +147,18 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 		}
 		unique := make(map[string]struct{}, len(models))
 		for _, model := range models {
-			if id := strings.TrimSpace(model); id != "" {
+			id := strings.TrimSpace(model)
+			if id == "" {
+				continue
+			}
+			unsafe := false
+			for _, r := range id {
+				if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+					unsafe = true
+					break
+				}
+			}
+			if !unsafe {
 				unique[id] = struct{}{}
 			}
 		}

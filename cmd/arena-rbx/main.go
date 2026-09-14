@@ -137,6 +137,7 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 				if id := strings.TrimSpace(model.ID); id != "" {
 					ids = append(ids, id)
 				}
+			}
 			return ids, nil
 		}
 	}

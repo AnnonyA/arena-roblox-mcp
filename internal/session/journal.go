@@ -52,7 +52,9 @@ func (j *Journal) CommitUndo() error {
 	if _, err := j.UndoCandidate(); err != nil {
 		return err
 	}
-	j.changes = j.changes[:len(j.changes)-1]
+	last := len(j.changes) - 1
+	j.changes[last] = Change{}
+	j.changes = j.changes[:last]
 	return nil
 }
 

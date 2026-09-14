@@ -10,7 +10,7 @@ import (
 )
 
 func TestStudioCommandFiltersUnsafeDiscoveredSessionMetadata(t *testing.T) {
-	in := strings.NewReader("/studio\n/exit\n")
+	in := strings.NewReader("/studio\n/status\n/exit\n")
 	var out bytes.Buffer
 
 	listStudios := func(context.Context) ([]roblox.StudioSession, error) {
@@ -28,8 +28,8 @@ func TestStudioCommandFiltersUnsafeDiscoveredSessionMetadata(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(got, "studio-safe — Safe (place 100)") {
-		t.Fatalf("safe Studio session missing from output: %q", got)
+	if !strings.Contains(got, "Studio     studio-safe\n") {
+		t.Fatalf("safe Studio session was not selected: %q", got)
 	}
 	if strings.ContainsRune(got, '\x1b') {
 		t.Fatalf("control character from discovered Studio session reached output: %q", got)

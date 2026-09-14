@@ -74,6 +74,9 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 		}
 		return fmt.Errorf("parse flags: %w", err)
 	}
+	if flags.NArg() != 0 {
+		return fmt.Errorf("unexpected positional argument: %s", strings.Join(flags.Args(), " "))
+	}
 
 	cfg, err := config.Load("arena-rbx.json")
 	if err != nil {

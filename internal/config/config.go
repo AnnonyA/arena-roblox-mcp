@@ -125,6 +125,9 @@ func Load(path string) (Config, error) {
 		if unicode.IsControl(r) {
 			return Config{}, errors.New("arena.model must not contain control characters")
 		}
+		if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
+			return Config{}, errors.New("arena.model must not contain bidirectional formatting")
+		}
 	}
 	for i, fallback := range cfg.Arena.Fallbacks {
 		fallback = strings.TrimSpace(fallback)
@@ -225,7 +228,6 @@ func scanJSONValue(decoder *json.Decoder, depth int) error {
 			if err := scanJSONValue(decoder, depth); err != nil {
 				return err
 			}
-		}
 		_, err := decoder.Token()
 		return err
 	default:

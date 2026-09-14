@@ -46,6 +46,15 @@ func safeModelIDs(models []string) []string {
 	return safe
 }
 
+func safeDisplayText(text string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			return -1
+		}
+		return r
+	}, text)
+}
+
 func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next InputHandler) InputHandler {
 	arenaConnected := false
 	return func(ctx context.Context, input Input) (bool, error) {
@@ -92,6 +101,9 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			tools, err := actions.Tools(ctx); if err != nil { return false, err }
 			if out == nil { return false, errors.New("cli: nil output") }
 			if len(tools) == 0 { _, err = io.WriteString(out, "No MCP tools available.\n"); return false, err }
+			for i := range tools {
+				tools[i] = safeDisplayText(tools[i])
+			}
 			_, err = io.WriteString(out, strings.Join(tools, "\n")+"\n"); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "history" && actions.History != nil {

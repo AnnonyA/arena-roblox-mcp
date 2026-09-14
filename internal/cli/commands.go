@@ -15,7 +15,10 @@ const (
 	InputTask
 )
 
-var ErrUnknownCommand = errors.New("unknown command")
+var (
+	ErrUnknownCommand             = errors.New("unknown command")
+	ErrUnexpectedCommandArgument  = errors.New("unexpected command argument")
+)
 
 type Input struct {
 	Kind     InputKind
@@ -37,6 +40,11 @@ var supportedCommands = map[string]struct{}{
 	"config":  {},
 	"help":    {},
 	"exit":    {},
+}
+
+var commandsWithArguments = map[string]struct{}{
+	"model":  {},
+	"studio": {},
 }
 
 var commandDescriptions = map[string]string{
@@ -70,6 +78,11 @@ func ParseLine(line string) (Input, error) {
 	}
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+	if argument != "" {
+		if _, ok := commandsWithArguments[command]; !ok {
+			return Input{}, fmt.Errorf("%w: /%s", ErrUnexpectedCommandArgument, command)
+		}
+	}
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
 }
 

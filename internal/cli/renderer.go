@@ -18,16 +18,22 @@ func StartupText(status StartupStatus) string {
 }
 
 func StatusText(status StartupStatus) string {
+	arena := safeDisplayText(status.Arena)
+	mcpStatus := safeDisplayText(status.MCP)
+	studio := safeDisplayText(status.Studio)
+	model := safeDisplayText(status.Model)
+	session := safeDisplayText(status.Session)
+
 	mcp := ""
-	if status.MCP != "" {
-		mcp = fmt.Sprintf("MCP        %s\n", status.MCP)
+	if mcpStatus != "" {
+		mcp = fmt.Sprintf("MCP        %s\n", mcpStatus)
 	}
 	return fmt.Sprintf(
 		"Arena      %s\n%sStudio     %s\nModel      %s\nSession    %s\n",
-		status.Arena,
+		arena,
 		mcp,
-		status.Studio,
-		status.Model,
-		status.Session,
+		studio,
+		model,
+		session,
 	)
 }

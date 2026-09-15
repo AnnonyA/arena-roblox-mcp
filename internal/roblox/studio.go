@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"unicode"
 
 	arenamcp "github.com/AnnonyA/arena-roblox-mcp/internal/mcp"
 )
@@ -41,6 +42,27 @@ func DiscoverStudioSessions(ctx context.Context, caller ToolCaller) ([]StudioSes
 	return ParseStudioSessions(result.StructuredContent)
 }
 
+func safeStudioID(id string) bool {
+	if strings.TrimSpace(id) != id || id == "" {
+		return false
+	}
+	for _, r := range id {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			return false
+		}
+	}
+	return true
+}
+
+func sanitizeStudioDisplayText(text string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			return -1
+		}
+		return r
+	}, text)
+}
+
 func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {
 	var response struct {
 		Studios []struct {
@@ -56,7 +78,7 @@ func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {
 	sessions := make([]StudioSession, 0, len(response.Studios))
 	seenIDs := make(map[string]struct{}, len(response.Studios))
 	for _, studio := range response.Studios {
-		if strings.TrimSpace(studio.ID) != studio.ID || studio.ID == "" {
+		if !safeStudioID(studio.ID) {
 			return nil, ErrInvalidStudioSession
 		}
 		if _, exists := seenIDs[studio.ID]; exists {
@@ -65,7 +87,7 @@ func ParseStudioSessions(payload json.RawMessage) ([]StudioSession, error) {
 		seenIDs[studio.ID] = struct{}{}
 		sessions = append(sessions, StudioSession{
 			ID:      studio.ID,
-			Name:    studio.Name,
+			Name:    sanitizeStudioDisplayText(studio.Name),
 			PlaceID: studio.PlaceID.String(),
 		})
 	}

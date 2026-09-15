@@ -111,7 +111,11 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			history, err := actions.History(ctx); if err != nil { return false, err }
 			if out == nil { return false, errors.New("cli: nil output") }
 			if len(history) == 0 { _, err = io.WriteString(out, "No session history recorded.\n"); return false, err }
-			_, err = io.WriteString(out, strings.Join(history, "\n")+"\n"); return false, err
+			safeHistory := make([]string, len(history))
+			for i := range history {
+				safeHistory[i] = safeDisplayText(history[i])
+			}
+			_, err = io.WriteString(out, strings.Join(safeHistory, "\n")+"\n"); return false, err
 		}
 		if input.Kind == InputCommand && input.Command == "diff" && actions.Diff != nil {
 			diff, err := actions.Diff(ctx); if err != nil { return false, err }

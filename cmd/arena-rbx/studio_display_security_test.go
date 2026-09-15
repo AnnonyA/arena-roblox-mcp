@@ -1,32 +1,25 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/AnnonyA/arena-roblox-mcp/internal/roblox"
 )
 
-func TestStudioListSanitizesUntrustedDisplayText(t *testing.T) {
-	in := strings.NewReader("/studio\n/exit\n")
-	var out bytes.Buffer
-	listStudios := func(context.Context) ([]roblox.StudioSession, error) {
-		return []roblox.StudioSession{
-			{ID: "studio-a\x1b[31m", Name: "unsafe\u200bname", PlaceID: "123\x1b[2J"},
-			{ID: "studio-b", Name: "safe", PlaceID: "456"},
-		}, nil
+func TestStudioDiscoveryRejectsUnsafeSessionID(t *testing.T) {
+	_, err := roblox.ParseStudioSessions([]byte(`{"studios":[{"studio_id":"studio-\u001b[31m","name":"safe","place_id":123}]}`))
+	if !errors.Is(err, roblox.ErrInvalidStudioSession) {
+		t.Fatalf("ParseStudioSessions() error = %v, want ErrInvalidStudioSession", err)
 	}
+}
 
-	if err := runWithStudioDependencies(context.Background(), in, &out, nil, nil, nil, nil, listStudios); err != nil {
-		t.Fatalf("runWithStudioDependencies() error = %v", err)
+func TestStudioDiscoverySanitizesDisplayMetadata(t *testing.T) {
+	sessions, err := roblox.ParseStudioSessions([]byte(`{"studios":[{"studio_id":"studio-a","name":"unsafe\u200bname\u001b[31m","place_id":123}]}`))
+	if err != nil {
+		t.Fatalf("ParseStudioSessions() error = %v", err)
 	}
-	got := out.String()
-	if strings.ContainsRune(got, '\x1b') {
-		t.Fatalf("terminal control character from Studio metadata reached output: %q", got)
-	}
-	if strings.ContainsRune(got, '\u200b') {
-		t.Fatalf("Unicode format character from Studio metadata reached output: %q", got)
+	if got, want := sessions[0].Name, "unsafename[31m"; got != want {
+		t.Fatalf("Name = %q, want %q", got, want)
 	}
 }

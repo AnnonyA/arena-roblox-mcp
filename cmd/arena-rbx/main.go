@@ -165,12 +165,12 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 				unique[id] = struct{}{}
 			}
 		}
-		models = models[:0]
+		filtered := make([]string, 0, len(unique))
 		for id := range unique {
-			models = append(models, id)
+			filtered = append(filtered, id)
 		}
-		sort.Strings(models)
-		return models, nil
+		sort.Strings(filtered)
+		return filtered, nil
 	}
 
 	var mcpClient *mcp.Client

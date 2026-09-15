@@ -23,7 +23,9 @@ func safeMultilineDisplayText(text string) string { return strings.Map(func(r ru
 // terminal state or hide content.
 func WriteSafeMultiline(out io.Writer, text string) error {
 	if out == nil { return errors.New("cli: nil output") }
-	_, err := io.WriteString(out, safeMultilineDisplayText(text))
+	safe := safeMultilineDisplayText(text)
+	n, err := io.WriteString(out, safe)
+	if err == nil && n != len(safe) { return io.ErrShortWrite }
 	return err
 }
 

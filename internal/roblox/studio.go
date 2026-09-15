@@ -116,7 +116,7 @@ func SelectStudio(sessions []StudioSession, requestedID string) (StudioSession, 
 }
 
 func TargetStudio(arguments json.RawMessage, studioID string) (json.RawMessage, error) {
-	if strings.TrimSpace(studioID) != studioID || studioID == "" {
+	if !safeStudioID(studioID) {
 		return nil, ErrStudioIDRequired
 	}
 

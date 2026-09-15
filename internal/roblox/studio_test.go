@@ -111,6 +111,15 @@ func TestTargetStudioRejectsWhitespaceStudioID(t *testing.T) {
 	}
 }
 
+func TestTargetStudioRejectsUnsafeStudioID(t *testing.T) {
+	for _, studioID := range []string{"studio-\u001b[31m", "studio-\u200bhidden"} {
+		_, err := TargetStudio(json.RawMessage(`{"path":"Workspace"}`), studioID)
+		if !errors.Is(err, ErrStudioIDRequired) {
+			t.Fatalf("TargetStudio(%q) error = %v, want ErrStudioIDRequired", studioID, err)
+		}
+	}
+}
+
 func TestTargetStudioRejectsConflictingStudioID(t *testing.T) {
 	_, err := TargetStudio(json.RawMessage(`{"studio_id":"studio-1"}`), "studio-2")
 	if !errors.Is(err, ErrStudioIDMismatch) {

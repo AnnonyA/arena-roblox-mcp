@@ -18,6 +18,15 @@ func safeModelIDs(models []string) []string { safe:=make([]string,0,len(models))
 func safeDisplayText(text string) string { return strings.Map(func(r rune) rune { if unicode.IsControl(r)||unicode.Is(unicode.Cf,r){return -1}; return r },text) }
 func safeMultilineDisplayText(text string) string { return strings.Map(func(r rune) rune { if r=='\n'||r=='\t' { return r }; if unicode.IsControl(r)||unicode.Is(unicode.Cf,r){return -1}; return r },text) }
 
+// WriteSafeMultiline writes terminal-facing text while preserving intentional
+// newlines and tabs and removing control/format characters that could alter
+// terminal state or hide content.
+func WriteSafeMultiline(out io.Writer, text string) error {
+	if out == nil { return errors.New("cli: nil output") }
+	_, err := io.WriteString(out, safeMultilineDisplayText(text))
+	return err
+}
+
 func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next InputHandler) InputHandler {
 	arenaConnected:=false
 	return func(ctx context.Context,input Input)(bool,error){
@@ -31,9 +40,9 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 		if input.Kind==InputCommand&&input.Command=="studio"&&actions.Studio!=nil{return false,actions.Studio(ctx,input.Argument)}
 		if input.Kind==InputCommand&&input.Command=="tools"&&actions.Tools!=nil {tools,err:=actions.Tools(ctx);if err!=nil{return false,err};if out==nil{return false,errors.New("cli: nil output")};if len(tools)==0{_,err=io.WriteString(out,"No MCP tools available.\n");return false,err};safeTools:=make([]string,len(tools));for i:=range tools{safeTools[i]=safeDisplayText(tools[i])};_,err=io.WriteString(out,strings.Join(safeTools,"\n")+"\n");return false,err}
 		if input.Kind==InputCommand&&input.Command=="history"&&actions.History!=nil {history,err:=actions.History(ctx);if err!=nil{return false,err};if out==nil{return false,errors.New("cli: nil output")};if len(history)==0{_,err=io.WriteString(out,"No session history recorded.\n");return false,err};safeHistory:=make([]string,len(history));for i:=range history{safeHistory[i]=safeDisplayText(history[i])};_,err=io.WriteString(out,strings.Join(safeHistory,"\n")+"\n");return false,err}
-		if input.Kind==InputCommand&&input.Command=="diff"&&actions.Diff!=nil {diff,err:=actions.Diff(ctx);if err!=nil{return false,err};if out==nil{return false,errors.New("cli: nil output")};if diff==""{return false,nil};_,err=io.WriteString(out,safeMultilineDisplayText(diff));return false,err}
+		if input.Kind==InputCommand&&input.Command=="diff"&&actions.Diff!=nil {diff,err:=actions.Diff(ctx);if err!=nil{return false,err};if diff==""{return false,nil};return false,WriteSafeMultiline(out,diff)}
 		if input.Kind==InputCommand&&input.Command=="undo" {if actions.Undo!=nil{return false,actions.Undo(ctx)};if out==nil{return false,errors.New("cli: nil output")};_,err:=io.WriteString(out,"Nothing to undo.\n");return false,err}
-		if input.Kind==InputCommand&&input.Command=="config"&&actions.Config!=nil {config,err:=actions.Config(ctx);if err!=nil{return false,err};if out==nil{return false,errors.New("cli: nil output")};if config==""{return false,nil};_,err=io.WriteString(out,safeMultilineDisplayText(config));return false,err}
+		if input.Kind==InputCommand&&input.Command=="config"&&actions.Config!=nil {config,err:=actions.Config(ctx);if err!=nil{return false,err};if config==""{return false,nil};return false,WriteSafeMultiline(out,config)}
 		if next==nil{return false,nil};return next(ctx,input)
 	}
 }

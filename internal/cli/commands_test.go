@@ -65,9 +65,21 @@ func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 func TestHelpTextListsEverySupportedCommandWithDescription(t *testing.T) {
 	help := HelpText()
 	for command := range supportedCommands {
-		needle := "/" + command + "  "
+		needle := "/" + command
 		if !strings.Contains(help, needle) {
 			t.Fatalf("HelpText() missing command description for %q", command)
 		}
+	}
+}
+
+func TestHelpTextShowsOptionalArguments(t *testing.T) {
+	help := HelpText()
+	for _, want := range []string{"/model [id]", "/studio [id]"} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("HelpText() = %q, want %q", help, want)
+		}
+	}
+	if strings.Contains(help, "/status [") {
+		t.Fatalf("HelpText() marks argumentless /status as accepting an argument: %q", help)
 	}
 }

@@ -73,12 +73,18 @@ func TestCommandMetadataIsComplete(t *testing.T) {
 	}
 }
 
-func TestHelpTextListsEverySupportedCommandWithDescription(t *testing.T) {
+func TestHelpTextRendersEveryCommandMetadataEntry(t *testing.T) {
 	help := HelpText()
-	for command := range commands {
-		needle := "/" + command
-		if !strings.Contains(help, needle) {
-			t.Fatalf("HelpText() missing command description for %q", command)
+	for command, metadata := range commands {
+		usage := "/" + command
+		if metadata.argumentHint != "" {
+			usage += " [" + metadata.argumentHint + "]"
+		}
+		if !strings.Contains(help, usage) {
+			t.Errorf("HelpText() missing usage %q", usage)
+		}
+		if !strings.Contains(help, metadata.description) {
+			t.Errorf("HelpText() missing description %q for /%s", metadata.description, command)
 		}
 	}
 }

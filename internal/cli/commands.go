@@ -27,44 +27,24 @@ type Input struct {
 	Task     string
 }
 
-var supportedCommands = map[string]struct{}{
-	"model":   {},
-	"models":  {},
-	"studio":  {},
-	"status":  {},
-	"tools":   {},
-	"history": {},
-	"diff":    {},
-	"undo":    {},
-	"clear":   {},
-	"config":  {},
-	"help":    {},
-	"exit":    {},
+type commandMetadata struct {
+	description  string
+	argumentHint string
 }
 
-var commandsWithArguments = map[string]struct{}{
-	"model":  {},
-	"studio": {},
-}
-
-var commandArgumentHints = map[string]string{
-	"model":  "id",
-	"studio": "id",
-}
-
-var commandDescriptions = map[string]string{
-	"model":   "change model",
-	"models":  "list Arena models",
-	"studio":  "select Studio instance",
-	"status":  "show Arena/MCP/Studio state",
-	"tools":   "show available MCP tools",
-	"history": "show session actions and tool calls",
-	"diff":    "show recorded changes",
-	"undo":    "revert the latest supported reversible change",
-	"clear":   "clear conversational context",
-	"config":  "show effective non-secret configuration",
-	"help":    "show commands",
-	"exit":    "exit cleanly",
+var commands = map[string]commandMetadata{
+	"model":   {description: "change model", argumentHint: "id"},
+	"models":  {description: "list Arena models"},
+	"studio":  {description: "select Studio instance", argumentHint: "id"},
+	"status":  {description: "show Arena/MCP/Studio state"},
+	"tools":   {description: "show available MCP tools"},
+	"history": {description: "show session actions and tool calls"},
+	"diff":    {description: "show recorded changes"},
+	"undo":    {description: "revert the latest supported reversible change"},
+	"clear":   {description: "clear conversational context"},
+	"config":  {description: "show effective non-secret configuration"},
+	"help":    {description: "show commands"},
+	"exit":    {description: "exit cleanly"},
 }
 
 func ParseLine(line string) (Input, error) {
@@ -78,34 +58,34 @@ func ParseLine(line string) (Input, error) {
 
 	fields := strings.Fields(line)
 	command := strings.ToLower(strings.TrimPrefix(fields[0], "/"))
-	if _, ok := supportedCommands[command]; !ok {
+	metadata, ok := commands[command]
+	if !ok {
 		return Input{}, fmt.Errorf("%w: /%s", ErrUnknownCommand, command)
 	}
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
-	if argument != "" {
-		if _, ok := commandsWithArguments[command]; !ok {
-			return Input{}, fmt.Errorf("%w: /%s", ErrUnexpectedCommandArgument, command)
-		}
+	if argument != "" && metadata.argumentHint == "" {
+		return Input{}, fmt.Errorf("%w: /%s", ErrUnexpectedCommandArgument, command)
 	}
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
 }
 
 func HelpText() string {
-	commands := make([]string, 0, len(supportedCommands))
-	for command := range supportedCommands {
-		commands = append(commands, command)
+	commandNames := make([]string, 0, len(commands))
+	for command := range commands {
+		commandNames = append(commandNames, command)
 	}
-	sort.Strings(commands)
+	sort.Strings(commandNames)
 
 	var help strings.Builder
 	help.WriteString("Commands:\n")
-	for _, command := range commands {
+	for _, command := range commandNames {
+		metadata := commands[command]
 		usage := "/" + command
-		if hint := commandArgumentHints[command]; hint != "" {
-			usage += " [" + hint + "]"
+		if metadata.argumentHint != "" {
+			usage += " [" + metadata.argumentHint + "]"
 		}
-		fmt.Fprintf(&help, "%-14s  %s\n", usage, commandDescriptions[command])
+		fmt.Fprintf(&help, "%-14s  %s\n", usage, metadata.description)
 	}
 	return help.String()
 }

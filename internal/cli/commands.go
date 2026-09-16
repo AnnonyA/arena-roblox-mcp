@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	ErrUnknownCommand             = errors.New("unknown command")
-	ErrUnexpectedCommandArgument  = errors.New("unexpected command argument")
+	ErrUnknownCommand            = errors.New("unknown command")
+	ErrUnexpectedCommandArgument = errors.New("unexpected command argument")
 )
 
 type Input struct {
@@ -72,7 +72,7 @@ func ParseLine(line string) (Input, error) {
 	}
 
 	fields := strings.Fields(line)
-	command := strings.TrimPrefix(fields[0], "/")
+	command := strings.ToLower(strings.TrimPrefix(fields[0], "/"))
 	if _, ok := supportedCommands[command]; !ok {
 		return Input{}, fmt.Errorf("%w: /%s", ErrUnknownCommand, command)
 	}

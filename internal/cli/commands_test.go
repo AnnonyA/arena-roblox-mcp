@@ -35,6 +35,19 @@ func TestParseLineParsesSlashCommandAndArgument(t *testing.T) {
 	}
 }
 
+func TestParseLineAcceptsCaseInsensitiveSlashCommand(t *testing.T) {
+	input, err := ParseLine(" /MoDeL  arena-code ")
+	if err != nil {
+		t.Fatalf("ParseLine() error = %v", err)
+	}
+	if input.Command != "model" {
+		t.Fatalf("command = %q, want normalized model", input.Command)
+	}
+	if input.Argument != "arena-code" {
+		t.Fatalf("argument = %q, want arena-code", input.Argument)
+	}
+}
+
 func TestParseLineRejectsUnknownSlashCommand(t *testing.T) {
 	_, err := ParseLine("/explode")
 	if !errors.Is(err, ErrUnknownCommand) {

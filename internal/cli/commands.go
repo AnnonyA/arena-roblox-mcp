@@ -47,6 +47,11 @@ var commandsWithArguments = map[string]struct{}{
 	"studio": {},
 }
 
+var commandArgumentHints = map[string]string{
+	"model":  "id",
+	"studio": "id",
+}
+
 var commandDescriptions = map[string]string{
 	"model":   "change model",
 	"models":  "list Arena models",
@@ -96,7 +101,11 @@ func HelpText() string {
 	var help strings.Builder
 	help.WriteString("Commands:\n")
 	for _, command := range commands {
-		fmt.Fprintf(&help, "/%s  %s\n", command, commandDescriptions[command])
+		usage := "/" + command
+		if hint := commandArgumentHints[command]; hint != "" {
+			usage += " [" + hint + "]"
+		}
+		fmt.Fprintf(&help, "%-14s  %s\n", usage, commandDescriptions[command])
 	}
 	return help.String()
 }

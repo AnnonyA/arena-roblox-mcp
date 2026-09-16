@@ -72,6 +72,16 @@ func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	}
 }
 
+func TestParseLineUnexpectedArgumentShowsUsage(t *testing.T) {
+	_, err := ParseLine("/status unexpected")
+	if err == nil {
+		t.Fatal("ParseLine() error = nil, want unexpected argument error")
+	}
+	if !strings.Contains(err.Error(), "usage: /status") {
+		t.Fatalf("ParseLine() error = %q, want actionable usage hint", err)
+	}
+}
+
 func TestCommandMetadataIsComplete(t *testing.T) {
 	for command, metadata := range commands {
 		if strings.TrimSpace(command) == "" {

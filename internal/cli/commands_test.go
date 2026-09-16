@@ -55,6 +55,16 @@ func TestParseLineRejectsUnknownSlashCommand(t *testing.T) {
 	}
 }
 
+func TestParseLineUnknownSlashCommandSuggestsHelp(t *testing.T) {
+	_, err := ParseLine("/explode")
+	if err == nil {
+		t.Fatal("ParseLine() error = nil, want unknown command error")
+	}
+	if !strings.Contains(err.Error(), "try /help") {
+		t.Fatalf("ParseLine() error = %q, want actionable /help hint", err)
+	}
+}
+
 func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	_, err := ParseLine("/status unexpected")
 	if !errors.Is(err, ErrUnexpectedCommandArgument) {

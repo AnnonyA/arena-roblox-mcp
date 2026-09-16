@@ -60,7 +60,7 @@ func ParseLine(line string) (Input, error) {
 	command := strings.ToLower(strings.TrimPrefix(fields[0], "/"))
 	metadata, ok := commands[command]
 	if !ok {
-		return Input{}, fmt.Errorf("%w: /%s", ErrUnknownCommand, command)
+		return Input{}, fmt.Errorf("%w: /%s (try /help)", ErrUnknownCommand, command)
 	}
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))

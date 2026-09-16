@@ -65,7 +65,7 @@ func ParseLine(line string) (Input, error) {
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 	if argument != "" && metadata.argumentHint == "" {
-		return Input{}, fmt.Errorf("%w: /%s", ErrUnexpectedCommandArgument, command)
+		return Input{}, fmt.Errorf("%w: /%s (usage: /%s)", ErrUnexpectedCommandArgument, command, command)
 	}
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
 }

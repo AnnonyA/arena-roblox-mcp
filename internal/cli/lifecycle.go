@@ -31,7 +31,7 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(out, "> "); err != nil {
+		if err := writeText(out, "> "); err != nil {
 			return err
 		}
 		if !scanner.Scan() {
@@ -40,7 +40,7 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 
 		input, err := ParseLine(scanner.Text())
 		if err != nil {
-			if _, writeErr := io.WriteString(out, "Error: "+safeDisplayText(err.Error())+"\n"); writeErr != nil {
+			if writeErr := writeText(out, "Error: "+safeDisplayText(err.Error())+"\n"); writeErr != nil {
 				return writeErr
 			}
 			continue
@@ -57,7 +57,7 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, handler InputHandler)
 			if errors.Is(err, context.Canceled) {
 				continue
 			}
-			if _, writeErr := io.WriteString(out, "Error: "+safeDisplayText(err.Error())+"\n"); writeErr != nil {
+			if writeErr := writeText(out, "Error: "+safeDisplayText(err.Error())+"\n"); writeErr != nil {
 				return writeErr
 			}
 			continue

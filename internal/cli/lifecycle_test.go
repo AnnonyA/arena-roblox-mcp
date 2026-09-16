@@ -71,7 +71,7 @@ func TestRunReportsLineErrorsAndContinues(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("dispatched inputs = %#v, want %#v", got, want)
 	}
-	const wantOutput = "> Error: unknown command: /unknown\n> > Error: agent unavailable\n> "
+	const wantOutput = "> Error: unknown command: /unknown (try /help)\n> > Error: agent unavailable\n> "
 	if gotOutput := out.String(); gotOutput != wantOutput {
 		t.Fatalf("output = %q, want %q", gotOutput, wantOutput)
 	}

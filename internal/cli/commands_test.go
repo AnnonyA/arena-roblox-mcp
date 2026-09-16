@@ -62,6 +62,34 @@ func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	}
 }
 
+func TestCommandMetadataMatchesSupportedCommands(t *testing.T) {
+	for command := range supportedCommands {
+		description, ok := commandDescriptions[command]
+		if !ok || strings.TrimSpace(description) == "" {
+			t.Errorf("supported command %q is missing a description", command)
+		}
+	}
+	for command := range commandDescriptions {
+		if _, ok := supportedCommands[command]; !ok {
+			t.Errorf("description exists for unsupported command %q", command)
+		}
+	}
+	for command := range commandsWithArguments {
+		if _, ok := supportedCommands[command]; !ok {
+			t.Errorf("argument support exists for unsupported command %q", command)
+		}
+		hint, ok := commandArgumentHints[command]
+		if !ok || strings.TrimSpace(hint) == "" {
+			t.Errorf("command %q accepts arguments but has no help hint", command)
+		}
+	}
+	for command := range commandArgumentHints {
+		if _, ok := commandsWithArguments[command]; !ok {
+			t.Errorf("argument hint exists for command %q that does not accept arguments", command)
+		}
+	}
+}
+
 func TestHelpTextListsEverySupportedCommandWithDescription(t *testing.T) {
 	help := HelpText()
 	for command := range supportedCommands {

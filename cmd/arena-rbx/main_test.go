@@ -23,7 +23,7 @@ func TestRunProvidesUsableHelpAndExitShell(t *testing.T) {
 	if !strings.Contains(got, "Arena Roblox MCP\n") {
 		t.Fatalf("output missing startup banner: %q", got)
 	}
-	if !strings.Contains(got, "/help  show commands\n") {
+	if !strings.Contains(got, "/help           show commands\n") {
 		t.Fatalf("output missing help text: %q", got)
 	}
 }
@@ -36,7 +36,7 @@ func TestRunWithArgsHelpFlagPrintsHelpWithoutStartingShell(t *testing.T) {
 	}
 
 	got := out.String()
-	if !strings.Contains(got, "/help  show commands\n") {
+	if !strings.Contains(got, "/help           show commands\n") {
 		t.Fatalf("help flag missing command help: %q", got)
 	}
 	if strings.Contains(got, "Arena Roblox MCP\n") {

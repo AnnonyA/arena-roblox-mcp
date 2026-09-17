@@ -76,7 +76,19 @@ func ParseLine(line string) (Input, error) {
 }
 
 func safeCommandDisplay(command string) string {
-	quoted := strconv.Quote(command)
+	const maxRunes = 80
+
+	var display strings.Builder
+	count := 0
+	for _, r := range command {
+		if count == maxRunes {
+			display.WriteString("...")
+			break
+		}
+		display.WriteRune(r)
+		count++
+	}
+	quoted := strconv.Quote(display.String())
 	return quoted[1 : len(quoted)-1]
 }
 

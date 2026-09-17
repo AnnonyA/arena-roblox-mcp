@@ -14,11 +14,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
           cache: true
+      - name: Format
+        shell: bash
+        run: |
+          unformatted="$(git diff --name-only --diff-filter=ACMRT HEAD^ HEAD -- '*.go' | xargs -r gofmt -l)"
+          if [ -n "$unformatted" ]; then
+            printf 'The following changed Go files are not gofmt-formatted:\n%s\n' "$unformatted"
+            exit 1
+          fi
       - name: Test
         run: go test ./...
       - name: Vet

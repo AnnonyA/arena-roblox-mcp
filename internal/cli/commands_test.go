@@ -111,6 +111,19 @@ func TestParseLineUnknownSlashCommandBoundsDisplayedInput(t *testing.T) {
 	}
 }
 
+func TestEditDistanceAtMostRejectsLengthDifferenceBeyondLimit(t *testing.T) {
+	if _, ok := editDistanceAtMost(strings.Repeat("x", 4096), "status", 2); ok {
+		t.Fatal("editDistanceAtMost() ok = true, want immediate rejection for distant lengths")
+	}
+}
+
+func TestEditDistanceAtMostFindsCloseUnicodeMatch(t *testing.T) {
+	distance, ok := editDistanceAtMost("státus", "status", 2)
+	if !ok || distance != 1 {
+		t.Fatalf("editDistanceAtMost() = (%d, %v), want (1, true)", distance, ok)
+	}
+}
+
 func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	_, err := ParseLine("/status unexpected")
 	if !errors.Is(err, ErrUnexpectedCommandArgument) {

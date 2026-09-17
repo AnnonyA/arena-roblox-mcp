@@ -93,7 +93,7 @@ func TestParseLineUnknownSlashCommandEscapesControlCharacters(t *testing.T) {
 	if strings.ContainsRune(err.Error(), '\x1b') {
 		t.Fatalf("ParseLine() error contains terminal escape: %q", err)
 	}
-	if !strings.Contains(err.Error(), `/bad\u001b[31m`) {
+	if !strings.Contains(err.Error(), `/bad\x1b[31m`) {
 		t.Fatalf("ParseLine() error = %q, want escaped control character", err)
 	}
 }

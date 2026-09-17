@@ -98,20 +98,37 @@ func suggestedCommand(command string) string {
 	best := ""
 	bestDistance := maxDistance + 1
 	for candidate := range commands {
-		distance := editDistance(command, candidate)
+		distance, ok := editDistanceAtMost(command, candidate, maxDistance)
+		if !ok {
+			continue
+		}
 		if distance < bestDistance || distance == bestDistance && candidate < best {
 			best = candidate
 			bestDistance = distance
 		}
 	}
-	if bestDistance > maxDistance {
-		return ""
-	}
 	return best
 }
 
-func editDistance(a, b string) int {
+func editDistanceAtMost(a, b string, maxDistance int) (int, bool) {
 	left, right := []rune(a), []rune(b)
+	lengthDifference := len(left) - len(right)
+	if lengthDifference < 0 {
+		lengthDifference = -lengthDifference
+	}
+	if lengthDifference > maxDistance {
+		return maxDistance + 1, false
+	}
+
+	distance := editDistanceRunes(left, right)
+	return distance, distance <= maxDistance
+}
+
+func editDistance(a, b string) int {
+	return editDistanceRunes([]rune(a), []rune(b))
+}
+
+func editDistanceRunes(left, right []rune) int {
 	previous := make([]int, len(right)+1)
 	current := make([]int, len(right)+1)
 	for j := range previous {

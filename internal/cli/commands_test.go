@@ -85,6 +85,19 @@ func TestParseLineUnknownSlashCommandAvoidsDistantSuggestion(t *testing.T) {
 	}
 }
 
+func TestParseLineUnknownSlashCommandEscapesControlCharacters(t *testing.T) {
+	_, err := ParseLine("/bad\x1b[31m")
+	if err == nil {
+		t.Fatal("ParseLine() error = nil, want unknown command error")
+	}
+	if strings.ContainsRune(err.Error(), '\x1b') {
+		t.Fatalf("ParseLine() error contains terminal escape: %q", err)
+	}
+	if !strings.Contains(err.Error(), `/bad\u001b[31m`) {
+		t.Fatalf("ParseLine() error = %q, want escaped control character", err)
+	}
+}
+
 func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	_, err := ParseLine("/status unexpected")
 	if !errors.Is(err, ErrUnexpectedCommandArgument) {

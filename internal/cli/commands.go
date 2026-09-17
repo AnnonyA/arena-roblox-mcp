@@ -65,9 +65,17 @@ func ParseLine(line string) (Input, error) {
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 	if argument != "" && metadata.argumentHint == "" {
-		return Input{}, fmt.Errorf("%w: /%s (usage: /%s)", ErrUnexpectedCommandArgument, command, command)
+		return Input{}, fmt.Errorf("%w: /%s (usage: %s)", ErrUnexpectedCommandArgument, command, commandUsage(command, metadata))
 	}
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
+}
+
+func commandUsage(command string, metadata commandMetadata) string {
+	usage := "/" + command
+	if metadata.argumentHint != "" {
+		usage += " [" + metadata.argumentHint + "]"
+	}
+	return usage
 }
 
 func HelpText() string {
@@ -81,11 +89,7 @@ func HelpText() string {
 	help.WriteString("Commands:\n")
 	for _, command := range commandNames {
 		metadata := commands[command]
-		usage := "/" + command
-		if metadata.argumentHint != "" {
-			usage += " [" + metadata.argumentHint + "]"
-		}
-		fmt.Fprintf(&help, "%-14s  %s\n", usage, metadata.description)
+		fmt.Fprintf(&help, "%-14s  %s\n", commandUsage(command, metadata), metadata.description)
 	}
 	return help.String()
 }

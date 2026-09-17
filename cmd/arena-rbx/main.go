@@ -31,6 +31,28 @@ type listToolsFunc func(context.Context) ([]string, error)
 type listStudiosFunc func(context.Context) ([]roblox.StudioSession, error)
 type runTaskFunc func(context.Context, []arena.Message) (string, error)
 
+func safeStudioSessions(sessions []roblox.StudioSession) []roblox.StudioSession {
+	safe := make([]roblox.StudioSession, 0, len(sessions))
+	for _, session := range sessions {
+		unsafe := false
+		for _, value := range []string{session.ID, session.Name, session.PlaceID} {
+			for _, r := range value {
+				if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+					unsafe = true
+					break
+				}
+			}
+			if unsafe {
+				break
+			}
+		}
+		if !unsafe {
+			safe = append(safe, session)
+		}
+	}
+	return safe
+}
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -229,6 +251,14 @@ func runWithStudioDependencies(ctx context.Context, in io.Reader, out io.Writer,
 			}
 			return roblox.DiscoverStudioSessions(ctx, client)
 		}
+	}
+	baseListStudios := listStudios
+	listStudios = func(ctx context.Context) ([]roblox.StudioSession, error) {
+		sessions, err := baseListStudios(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return safeStudioSessions(sessions), nil
 	}
 
 	if runTask == nil {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -60,10 +61,11 @@ func ParseLine(line string) (Input, error) {
 	command := strings.ToLower(strings.TrimPrefix(fields[0], "/"))
 	metadata, ok := commands[command]
 	if !ok {
+		displayCommand := safeCommandDisplay(command)
 		if suggestion := suggestedCommand(command); suggestion != "" {
-			return Input{}, fmt.Errorf("%w: /%s (did you mean /%s? try /help)", ErrUnknownCommand, command, suggestion)
+			return Input{}, fmt.Errorf("%w: /%s (did you mean /%s? try /help)", ErrUnknownCommand, displayCommand, suggestion)
 		}
-		return Input{}, fmt.Errorf("%w: /%s (try /help)", ErrUnknownCommand, command)
+		return Input{}, fmt.Errorf("%w: /%s (try /help)", ErrUnknownCommand, displayCommand)
 	}
 
 	argument := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
@@ -71,6 +73,11 @@ func ParseLine(line string) (Input, error) {
 		return Input{}, fmt.Errorf("%w: /%s (usage: %s)", ErrUnexpectedCommandArgument, command, commandUsage(command, metadata))
 	}
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
+}
+
+func safeCommandDisplay(command string) string {
+	quoted := strconv.Quote(command)
+	return quoted[1 : len(quoted)-1]
 }
 
 func suggestedCommand(command string) string {

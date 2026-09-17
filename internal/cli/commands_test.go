@@ -98,6 +98,19 @@ func TestParseLineUnknownSlashCommandEscapesControlCharacters(t *testing.T) {
 	}
 }
 
+func TestParseLineUnknownSlashCommandBoundsDisplayedInput(t *testing.T) {
+	_, err := ParseLine("/" + strings.Repeat("x", 4096))
+	if err == nil {
+		t.Fatal("ParseLine() error = nil, want unknown command error")
+	}
+	if len(err.Error()) > 256 {
+		t.Fatalf("ParseLine() error length = %d, want bounded diagnostic", len(err.Error()))
+	}
+	if !strings.Contains(err.Error(), "...") {
+		t.Fatalf("ParseLine() error = %q, want truncation marker", err)
+	}
+}
+
 func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	_, err := ParseLine("/status unexpected")
 	if !errors.Is(err, ErrUnexpectedCommandArgument) {

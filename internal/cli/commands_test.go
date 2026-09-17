@@ -65,6 +65,26 @@ func TestParseLineUnknownSlashCommandSuggestsHelp(t *testing.T) {
 	}
 }
 
+func TestParseLineUnknownSlashCommandSuggestsCloseMatch(t *testing.T) {
+	_, err := ParseLine("/stats")
+	if err == nil {
+		t.Fatal("ParseLine() error = nil, want unknown command error")
+	}
+	if !strings.Contains(err.Error(), "did you mean /status?") {
+		t.Fatalf("ParseLine() error = %q, want /status typo hint", err)
+	}
+}
+
+func TestParseLineUnknownSlashCommandAvoidsDistantSuggestion(t *testing.T) {
+	_, err := ParseLine("/explode")
+	if err == nil {
+		t.Fatal("ParseLine() error = nil, want unknown command error")
+	}
+	if strings.Contains(err.Error(), "did you mean") {
+		t.Fatalf("ParseLine() error = %q, want no low-confidence typo hint", err)
+	}
+}
+
 func TestParseLineRejectsArgumentsForArgumentlessCommand(t *testing.T) {
 	_, err := ParseLine("/status unexpected")
 	if !errors.Is(err, ErrUnexpectedCommandArgument) {

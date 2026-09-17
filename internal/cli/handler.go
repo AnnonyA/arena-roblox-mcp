@@ -8,7 +8,10 @@ import (
 	"unicode"
 )
 
-const maxToolDisplayRunes = 512
+const (
+	maxToolDisplayRunes    = 512
+	maxHistoryDisplayRunes = 512
+)
 
 type CommandActions struct {
 	Clear   func()
@@ -181,7 +184,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			}
 			safeHistory := make([]string, len(history))
 			for i := range history {
-				safeHistory[i] = safeDisplayText(history[i])
+				safeHistory[i] = boundedSafeDisplayText(history[i], maxHistoryDisplayRunes)
 			}
 			return false, writeText(out, strings.Join(safeHistory, "\n")+"\n")
 		}

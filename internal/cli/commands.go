@@ -60,6 +60,9 @@ func ParseLine(line string) (Input, error) {
 	command := strings.ToLower(strings.TrimPrefix(fields[0], "/"))
 	metadata, ok := commands[command]
 	if !ok {
+		if suggestion := suggestedCommand(command); suggestion != "" {
+			return Input{}, fmt.Errorf("%w: /%s (did you mean /%s? try /help)", ErrUnknownCommand, command, suggestion)
+		}
 		return Input{}, fmt.Errorf("%w: /%s (try /help)", ErrUnknownCommand, command)
 	}
 
@@ -68,6 +71,58 @@ func ParseLine(line string) (Input, error) {
 		return Input{}, fmt.Errorf("%w: /%s (usage: %s)", ErrUnexpectedCommandArgument, command, commandUsage(command, metadata))
 	}
 	return Input{Kind: InputCommand, Command: command, Argument: argument}, nil
+}
+
+func suggestedCommand(command string) string {
+	const maxDistance = 2
+
+	best := ""
+	bestDistance := maxDistance + 1
+	for candidate := range commands {
+		distance := editDistance(command, candidate)
+		if distance < bestDistance || distance == bestDistance && candidate < best {
+			best = candidate
+			bestDistance = distance
+		}
+	}
+	if bestDistance > maxDistance {
+		return ""
+	}
+	return best
+}
+
+func editDistance(a, b string) int {
+	left, right := []rune(a), []rune(b)
+	previous := make([]int, len(right)+1)
+	for j := range previous {
+		previous[j] = j
+	}
+	for i, leftRune := range left {
+		current := make([]int, len(right)+1)
+		current[0] = i + 1
+		for j, rightRune := range right {
+			cost := 0
+			if leftRune != rightRune {
+				cost = 1
+			}
+			current[j+1] = min3(current[j]+1, previous[j+1]+1, previous[j]+cost)
+		}
+		previous = current
+	}
+	return previous[len(right)]
+}
+
+func min3(a, b, c int) int {
+	if a < b {
+		if a < c {
+			return a
+		}
+		return c
+	}
+	if b < c {
+		return b
+	}
+	return c
 }
 
 func commandUsage(command string, metadata commandMetadata) string {

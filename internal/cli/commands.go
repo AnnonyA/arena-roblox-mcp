@@ -101,11 +101,11 @@ func suggestedCommand(command string) string {
 func editDistance(a, b string) int {
 	left, right := []rune(a), []rune(b)
 	previous := make([]int, len(right)+1)
+	current := make([]int, len(right)+1)
 	for j := range previous {
 		previous[j] = j
 	}
 	for i, leftRune := range left {
-		current := make([]int, len(right)+1)
 		current[0] = i + 1
 		for j, rightRune := range right {
 			cost := 0
@@ -114,7 +114,7 @@ func editDistance(a, b string) int {
 			}
 			current[j+1] = min3(current[j]+1, previous[j+1]+1, previous[j]+cost)
 		}
-		previous = current
+		previous, current = current, previous
 	}
 	return previous[len(right)]
 }

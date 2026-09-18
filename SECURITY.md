@@ -1,33 +1,31 @@
 # Security Policy
 
+## Supported version
+
+Security fixes are applied to the current `main` branch. This project is still pre-1.0, so older snapshots are not maintained as separate supported release lines.
+
 ## Reporting a vulnerability
 
-Please do not open a public issue for a vulnerability that could expose credentials, execute unintended Studio actions, or otherwise put users at risk.
+Please report suspected vulnerabilities privately through GitHub's **Security** tab using **Report a vulnerability** when private vulnerability reporting is available for this repository. Do not include API keys, access tokens, Roblox credentials, private project data, or other secrets in a public issue, pull request, log, screenshot, or reproduction.
 
-Instead, use GitHub's private vulnerability reporting for this repository when available. Include the affected version or commit, a concise reproduction, the expected and observed behavior, and any relevant logs with secrets removed.
+A useful report includes:
 
-Do not include Arena API keys, authorization headers, Roblox credentials, session tokens, or other private data in reports.
+- the affected commit or version;
+- the smallest safe reproduction you can provide;
+- the security impact and expected behavior;
+- relevant operating-system and Roblox Studio details; and
+- whether the issue can expose credentials, alter files, execute unexpected tools, or escape the configured safety boundaries.
+
+If private vulnerability reporting is unavailable, open a public issue containing only a non-sensitive request for a private contact path. Do not disclose exploit details or secrets in that issue.
 
 ## Credential handling
 
-`arena-rbx` is designed to read the Arena API key from the environment variable configured by `arena.apiKeyEnv`, with local `.env` support for development convenience. Real credentials must never be committed to the repository.
+`arena-rbx` is designed to resolve the Arena API key from the environment (or a local ignored `.env` file) rather than from command-line arguments. Never commit a real API key. Use `.env.example` only as a placeholder template.
 
-When sharing logs or command output, review them for secrets before posting. The project should not print API keys or authorization headers, but reports should still be sanitized before they are made public.
+When sharing diagnostics, review them for secrets and private Roblox project content first. The CLI should not print authorization headers or API keys; a report that shows otherwise should be treated as a credential-exposure vulnerability.
 
-## Terminal output safety
+## Security boundaries
 
-Treat text originating outside the CLI itself as untrusted terminal data. Model IDs, Studio metadata, MCP tool descriptions, session history, diffs, configuration values, and propagated errors may contain control or Unicode format characters even when their upstream source is normally trusted.
+Safe mode reduces accidental destructive actions, but it is not a sandbox. The configured MCP server and Roblox Studio can execute operations with the permissions of the local user and Studio session. Only connect MCP servers and use project files you trust.
 
-Terminal-facing dynamic text should pass through the CLI display sanitizers rather than being written directly. Single-line fields remove control and Unicode format characters. Multiline output uses `cli.WriteSafeMultiline`, which preserves intentional newlines and tabs while removing other control and Unicode format characters. This prevents dynamic data from injecting terminal escape sequences or visually hiding/reordering content.
-
-When adding a new output path, include a regression test with representative terminal-control and invisible-Unicode input. Fuzz coverage for the shared sanitizers should remain enabled. Static CLI-owned formatting may still be written directly when it contains no dynamic data.
-
-## Safe testing
-
-Security reports should use fake or disposable data whenever possible. Do not test destructive MCP or Roblox Studio operations against projects you cannot safely restore.
-
-For high-risk tool behavior, prefer unit or integration tests with fakes/mocks. A real Roblox Studio test should only be used when necessary and when the affected place can be recovered.
-
-## Supported versions
-
-Security fixes are applied to the current `main` branch while the project is pre-1.0. Once tagged releases have a formal support window, this section will be updated with the supported release lines.
+High-risk or irreversible operations should require confirmation while safe mode is enabled. Reversible writes depend on the change journal having captured sufficient prior state; `/undo` is not a replacement for source control or backups.

@@ -12,6 +12,7 @@ const (
 	maxToolDisplayRunes    = 512
 	maxHistoryDisplayRunes = 512
 	maxModelIDDisplayRunes = 256
+	maxConfigDisplayRunes  = 16 * 1024
 	maxDiffDisplayRunes    = 64 * 1024
 )
 
@@ -231,7 +232,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			if config == "" {
 				return false, nil
 			}
-			return false, WriteSafeMultiline(out, config)
+			return false, writeText(out, boundedSafeMultilineDisplayText(config, maxConfigDisplayRunes))
 		}
 		if next == nil {
 			return false, nil

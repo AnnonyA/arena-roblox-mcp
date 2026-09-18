@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 type InputKind uint8
@@ -111,8 +112,8 @@ func suggestedCommand(command string) string {
 }
 
 func editDistanceAtMost(a, b string, maxDistance int) (int, bool) {
-	left, right := []rune(a), []rune(b)
-	lengthDifference := len(left) - len(right)
+	leftLen, rightLen := utf8.RuneCountInString(a), utf8.RuneCountInString(b)
+	lengthDifference := leftLen - rightLen
 	if lengthDifference < 0 {
 		lengthDifference = -lengthDifference
 	}
@@ -120,7 +121,7 @@ func editDistanceAtMost(a, b string, maxDistance int) (int, bool) {
 		return maxDistance + 1, false
 	}
 
-	distance := editDistanceRunes(left, right)
+	distance := editDistanceRunes([]rune(a), []rune(b))
 	return distance, distance <= maxDistance
 }
 

@@ -2,7 +2,7 @@
 
 `arena-roblox-mcp` is a lightweight Go CLI that connects Arena.ai models with Roblox Studio through the official MCP workflow.
 
-> **Status:** active v0.1 development. The CLI, Arena model discovery/streaming, MCP connection plumbing, Studio selection, session history, diff/undo foundations, and CI are implemented. The full agentic Roblox tool-calling loop is still being completed, so do not treat the current build as a finished release.
+> **Status:** v0.1 implementation plan complete; ongoing work focuses on incremental quality, performance, reliability, tests, documentation, security, and CLI experience within the approved design. The project is still pre-release, so review the current implementation before relying on it for important Roblox projects.
 
 ## Requirements
 

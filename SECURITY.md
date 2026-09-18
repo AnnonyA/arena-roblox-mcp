@@ -28,6 +28,12 @@ Security reports should use fake or disposable data whenever possible. Do not te
 
 For high-risk tool behavior, prefer unit or integration tests with fakes/mocks. A real Roblox Studio test should only be used when necessary and when the affected place can be recovered.
 
+## Security boundaries
+
+Safe mode reduces accidental destructive actions, but it is not a sandbox. The configured MCP server and Roblox Studio MCP process operate with the permissions available to the local user and Studio session, so only connect MCP servers and open project files you trust.
+
+High-risk or irreversible operations should require confirmation while safe mode is enabled. Reversible writes depend on the change journal capturing sufficient prior state; `/undo` is not a replacement for source control or backups.
+
 ## Supported versions
 
 Security fixes are applied to the current `main` branch while the project is pre-1.0. Once tagged releases have a formal support window, this section will be updated with the supported release lines.

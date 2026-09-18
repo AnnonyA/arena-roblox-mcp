@@ -11,6 +11,7 @@ import (
 const (
 	maxToolDisplayRunes    = 512
 	maxHistoryDisplayRunes = 512
+	maxModelIDDisplayRunes = 256
 )
 
 type CommandActions struct {
@@ -35,6 +36,9 @@ func NewCommandHandlerWithClear(out io.Writer, clear func(), next InputHandler) 
 func safeModelIDs(models []string) []string {
 	safe := make([]string, 0, len(models))
 	for _, model := range models {
+		if len([]rune(model)) > maxModelIDDisplayRunes {
+			continue
+		}
 		unsafe := false
 		for _, r := range model {
 			if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {

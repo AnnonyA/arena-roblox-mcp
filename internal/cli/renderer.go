@@ -2,6 +2,8 @@ package cli
 
 import "fmt"
 
+const maxStatusDisplayRunes = 256
+
 type StartupStatus struct {
 	Arena   string
 	MCP     string
@@ -18,11 +20,11 @@ func StartupText(status StartupStatus) string {
 }
 
 func StatusText(status StartupStatus) string {
-	arena := safeDisplayText(status.Arena)
-	mcpStatus := safeDisplayText(status.MCP)
-	studio := safeDisplayText(status.Studio)
-	model := safeDisplayText(status.Model)
-	session := safeDisplayText(status.Session)
+	arena := boundedSafeDisplayText(status.Arena, maxStatusDisplayRunes)
+	mcpStatus := boundedSafeDisplayText(status.MCP, maxStatusDisplayRunes)
+	studio := boundedSafeDisplayText(status.Studio, maxStatusDisplayRunes)
+	model := boundedSafeDisplayText(status.Model, maxStatusDisplayRunes)
+	session := boundedSafeDisplayText(status.Session, maxStatusDisplayRunes)
 
 	mcp := ""
 	if mcpStatus != "" {

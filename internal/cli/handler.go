@@ -12,6 +12,7 @@ const (
 	maxToolDisplayRunes    = 512
 	maxHistoryDisplayRunes = 512
 	maxModelIDDisplayRunes = 256
+	maxDiffDisplayRunes    = 64 * 1024
 )
 
 type CommandActions struct {
@@ -84,6 +85,20 @@ func safeMultilineDisplayText(text string) string {
 		}
 		return r
 	}, text)
+}
+func boundedSafeMultilineDisplayText(text string, maxRunes int) string {
+	safe := safeMultilineDisplayText(text)
+	runes := []rune(safe)
+	if maxRunes <= 0 {
+		return ""
+	}
+	if len(runes) <= maxRunes {
+		return safe
+	}
+	if maxRunes == 1 {
+		return "…"
+	}
+	return string(runes[:maxRunes-1]) + "…"
 }
 
 func writeText(out io.Writer, text string) error {
@@ -200,7 +215,7 @@ func NewCommandHandlerWithActions(out io.Writer, actions CommandActions, next In
 			if diff == "" {
 				return false, nil
 			}
-			return false, WriteSafeMultiline(out, diff)
+			return false, writeText(out, boundedSafeMultilineDisplayText(diff, maxDiffDisplayRunes))
 		}
 		if input.Kind == InputCommand && input.Command == "undo" {
 			if actions.Undo != nil {

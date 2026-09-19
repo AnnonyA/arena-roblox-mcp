@@ -107,6 +107,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 			if isBidirectionalFormatting(r) {
 				return nil, fmt.Errorf("decode Arena models: model id contains bidirectional formatting at index %d", i)
 			}
+			if unicode.Is(unicode.Cf, r) {
+				return nil, fmt.Errorf("decode Arena models: model id contains format character at index %d", i)
+			}
 		}
 		if _, ok := seen[model.ID]; ok {
 			return nil, fmt.Errorf("decode Arena models: duplicate model id %q at index %d", model.ID, i)

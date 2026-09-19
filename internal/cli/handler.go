@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -38,7 +39,7 @@ func NewCommandHandlerWithClear(out io.Writer, clear func(), next InputHandler) 
 func safeModelIDs(models []string) []string {
 	safe := make([]string, 0, len(models))
 	for _, model := range models {
-		if len([]rune(model)) > maxModelIDDisplayRunes {
+		if utf8.RuneCountInString(model) > maxModelIDDisplayRunes {
 			continue
 		}
 		unsafe := false

@@ -63,18 +63,7 @@ func safeDisplayText(text string) string {
 	}, text)
 }
 func boundedSafeDisplayText(text string, maxRunes int) string {
-	safe := safeDisplayText(text)
-	runes := []rune(safe)
-	if maxRunes <= 0 {
-		return ""
-	}
-	if len(runes) <= maxRunes {
-		return safe
-	}
-	if maxRunes == 1 {
-		return "…"
-	}
-	return string(runes[:maxRunes-1]) + "…"
+	return boundedDisplayText(text, maxRunes, false)
 }
 func safeMultilineDisplayText(text string) string {
 	return strings.Map(func(r rune) rune {
@@ -88,18 +77,36 @@ func safeMultilineDisplayText(text string) string {
 	}, text)
 }
 func boundedSafeMultilineDisplayText(text string, maxRunes int) string {
-	safe := safeMultilineDisplayText(text)
-	runes := []rune(safe)
+	return boundedDisplayText(text, maxRunes, true)
+}
+
+func boundedDisplayText(text string, maxRunes int, multiline bool) string {
 	if maxRunes <= 0 {
 		return ""
 	}
-	if len(runes) <= maxRunes {
-		return safe
+
+	runes := make([]rune, 0, maxRunes)
+	truncated := false
+	for _, r := range text {
+		if multiline && (r == '\n' || r == '\t') {
+			// Preserve intentional multiline formatting.
+		} else if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			continue
+		}
+		if len(runes) == maxRunes {
+			truncated = true
+			break
+		}
+		runes = append(runes, r)
+	}
+	if !truncated {
+		return string(runes)
 	}
 	if maxRunes == 1 {
 		return "…"
 	}
-	return string(runes[:maxRunes-1]) + "…"
+	runes[maxRunes-1] = '…'
+	return string(runes)
 }
 
 func writeText(out io.Writer, text string) error {

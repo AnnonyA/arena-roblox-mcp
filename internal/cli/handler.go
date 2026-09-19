@@ -86,7 +86,11 @@ func boundedDisplayText(text string, maxRunes int, multiline bool) string {
 		return ""
 	}
 
-	runes := make([]rune, 0, maxRunes)
+	capacity := maxRunes
+	if len(text) < capacity {
+		capacity = len(text)
+	}
+	runes := make([]rune, 0, capacity)
 	truncated := false
 	for _, r := range text {
 		if multiline && (r == '\n' || r == '\t') {

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+	"unicode/utf8"
 )
 
 func FuzzSafeDisplayText(f *testing.F) {
@@ -52,6 +53,39 @@ func FuzzSafeMultilineDisplayText(f *testing.F) {
 			}
 			if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
 				t.Fatalf("safeMultilineDisplayText(%q) retained unsafe rune %U in %q", input, r, got)
+			}
+		}
+	})
+}
+
+func FuzzBoundedSafeMultilineDisplayText(f *testing.F) {
+	for _, seed := range []struct {
+		input string
+		limit int
+	}{
+		{"line one\nline two\tvalue", 8},
+		{"escape\x1b[2Jscreen", 6},
+		{"hidden\u202etext", 4},
+		{"🎮🎮🎮", 2},
+		{"anything", 0},
+	} {
+		f.Add(seed.input, seed.limit)
+	}
+
+	f.Fuzz(func(t *testing.T, input string, limit int) {
+		if limit < 0 || limit > 1024 {
+			t.Skip()
+		}
+		got := boundedSafeMultilineDisplayText(input, limit)
+		if utf8.RuneCountInString(got) > limit {
+			t.Fatalf("output exceeds limit %d: %q", limit, got)
+		}
+		for _, r := range got {
+			if r == '\n' || r == '\t' {
+				continue
+			}
+			if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+				t.Fatalf("bounded output retained unsafe rune %U in %q", r, got)
 			}
 		}
 	})

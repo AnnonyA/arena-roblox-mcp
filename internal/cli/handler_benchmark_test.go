@@ -1,6 +1,9 @@
 package cli
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func BenchmarkBoundedSafeDisplayTextShort(b *testing.B) {
 	const input = "tool result: ready"
@@ -21,7 +24,7 @@ func BenchmarkBoundedSafeMultilineDisplayTextShort(b *testing.B) {
 }
 
 func BenchmarkBoundedSafeMultilineDisplayTextTruncated(b *testing.B) {
-	input := string(make([]byte, maxDiffDisplayRunes*2))
+	input := strings.Repeat("x", maxDiffDisplayRunes*2)
 
 	b.ReportAllocs()
 	b.SetBytes(int64(len(input)))

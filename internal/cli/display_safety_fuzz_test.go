@@ -58,7 +58,7 @@ func FuzzSafeMultilineDisplayText(f *testing.F) {
 	})
 }
 
-func FuzzBoundedSafeMultilineDisplayText(f *testing.F) {
+func FuzzBoundedSafeMultilineDisplayTextIntLimit(f *testing.F) {
 	for _, seed := range []struct {
 		input string
 		limit int

@@ -17,7 +17,7 @@ func TestStreamChatRejectsUnsafeToolCallIDs(t *testing.T) {
 		want string
 	}{
 		{name: "control character", id: "call\\n1", want: "control character"},
-		{name: "bidirectional formatting", id: "call\\u202e1", want: "bidirectional formatting"},
+		{name: "format character", id: "call\\u202e1", want: "format character"},
 	}
 
 	for _, tt := range tests {

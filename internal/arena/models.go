@@ -104,9 +104,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 			if r == '\u2028' || r == '\u2029' {
 				return nil, fmt.Errorf("decode Arena models: model id contains line separator at index %d", i)
 			}
-			if isBidirectionalFormatting(r) {
-				return nil, fmt.Errorf("decode Arena models: model id contains bidirectional formatting at index %d", i)
-			}
+			// Unicode format characters include bidi controls such as U+202A–U+202E
+			// and U+2066–U+2069, so one category check covers all invisible
+			// formatting characters without a redundant bidi-specific branch.
 			if unicode.Is(unicode.Cf, r) {
 				return nil, fmt.Errorf("decode Arena models: model id contains format character at index %d", i)
 			}
@@ -117,8 +117,4 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 		seen[model.ID] = struct{}{}
 	}
 	return payload.Data, nil
-}
-
-func isBidirectionalFormatting(r rune) bool {
-	return r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069'
 }

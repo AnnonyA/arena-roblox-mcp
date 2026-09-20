@@ -21,6 +21,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call id contains control character")
 		}
+		if r == '\u2028' || r == '\u2029' {
+			return fmt.Errorf("tool call id contains line separator")
+		}
 		if unicode.Is(unicode.Cf, r) {
 			return fmt.Errorf("tool call id contains format character")
 		}
@@ -31,6 +34,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	for _, r := range decoded.Function.Name {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call name contains control character")
+		}
+		if r == '\u2028' || r == '\u2029' {
+			return fmt.Errorf("tool call name contains line separator")
 		}
 		if unicode.Is(unicode.Cf, r) {
 			return fmt.Errorf("tool call name contains format character")

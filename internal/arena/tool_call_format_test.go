@@ -19,6 +19,10 @@ func TestToolCallRejectsUnicodeFormatCharacters(t *testing.T) {
 		{name: "word joiner in id", id: "call\u20601", fnName: "inspect", wantErr: "tool call id contains format character"},
 		{name: "zero width space in name", id: "call-1", fnName: "ins\u200bpect", wantErr: "tool call name contains format character"},
 		{name: "word joiner in name", id: "call-1", fnName: "ins\u2060pect", wantErr: "tool call name contains format character"},
+		{name: "line separator in id", id: "call\u20281", fnName: "inspect", wantErr: "tool call id contains line separator"},
+		{name: "paragraph separator in id", id: "call\u20291", fnName: "inspect", wantErr: "tool call id contains line separator"},
+		{name: "line separator in name", id: "call-1", fnName: "ins\u2028pect", wantErr: "tool call name contains line separator"},
+		{name: "paragraph separator in name", id: "call-1", fnName: "ins\u2029pect", wantErr: "tool call name contains line separator"},
 	}
 
 	for _, tt := range tests {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unicode/utf8"
 )
 
 var ErrNoDiscoverer = errors.New("mcp tool discoverer is not configured")
@@ -107,6 +108,9 @@ func (r *Registry) Invalidate() {
 func validateToolNames(tools []Tool) error {
 	seen := make(map[string]struct{}, len(tools))
 	for i, tool := range tools {
+		if !utf8.ValidString(tool.Name) {
+			return fmt.Errorf("MCP tool name at index %d contains invalid UTF-8", i)
+		}
 		trimmed := strings.TrimSpace(tool.Name)
 		if trimmed == "" {
 			return fmt.Errorf("blank MCP tool name at index %d", i)

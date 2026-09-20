@@ -21,9 +21,9 @@ func TestStreamChatRejectsBidirectionalFormattingInToolCallName(t *testing.T) {
 	c := NewClient(ClientOptions{BaseURL: srv.URL})
 	_, err := c.StreamChat(context.Background(), ChatRequest{Model: "model-a"}, nil)
 	if err == nil {
-		t.Fatal("StreamChat error = nil, want bidirectional-formatting error for tool call name")
+		t.Fatal("StreamChat error = nil, want format-character error for tool call name")
 	}
-	if !strings.Contains(err.Error(), "bidirectional formatting") {
-		t.Fatalf("StreamChat error = %q, want bidirectional-formatting error", err)
+	if !strings.Contains(err.Error(), "format character") {
+		t.Fatalf("StreamChat error = %q, want format-character error", err)
 	}
 }

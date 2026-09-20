@@ -20,9 +20,9 @@ func TestListModelsRejectsBidirectionalFormattingInModelID(t *testing.T) {
 	c := NewClient(ClientOptions{BaseURL: srv.URL})
 	_, err := c.ListModels(context.Background())
 	if err == nil {
-		t.Fatal("expected bidirectional-formatting model ID error")
+		t.Fatal("expected format-character model ID error")
 	}
-	if !strings.Contains(err.Error(), "bidirectional formatting") {
-		t.Fatalf("error = %q, want bidirectional-formatting model ID error", err)
+	if !strings.Contains(err.Error(), "format character") {
+		t.Fatalf("error = %q, want format-character model ID error", err)
 	}
 }

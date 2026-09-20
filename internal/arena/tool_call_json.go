@@ -21,8 +21,8 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call id contains control character")
 		}
-		if isBidirectionalFormatting(r) {
-			return fmt.Errorf("tool call id contains bidirectional formatting")
+		if unicode.Is(unicode.Cf, r) {
+			return fmt.Errorf("tool call id contains format character")
 		}
 	}
 	if strings.TrimSpace(decoded.Function.Name) != decoded.Function.Name {
@@ -32,8 +32,8 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call name contains control character")
 		}
-		if isBidirectionalFormatting(r) {
-			return fmt.Errorf("tool call name contains bidirectional formatting")
+		if unicode.Is(unicode.Cf, r) {
+			return fmt.Errorf("tool call name contains format character")
 		}
 	}
 	*call = ToolCall(decoded)

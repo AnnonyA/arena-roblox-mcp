@@ -50,6 +50,33 @@ func TestToolCallUnmarshalRejectsOversizedType(t *testing.T) {
 	}
 }
 
+func TestToolCallUnmarshalRejectsMalformedType(t *testing.T) {
+	tests := []struct {
+		name     string
+		callType string
+		want     string
+	}{
+		{name: "surrounding whitespace", callType: " function", want: "surrounding whitespace"},
+		{name: "control character", callType: "func\\ntion", want: "control character"},
+		{name: "line separator", callType: "func\\u2028tion", want: "line separator"},
+		{name: "format character", callType: "func\\u200Btion", want: "format character"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := []byte(`{"id":"call_1","type":"` + tt.callType + `","function":{"name":"read_script","arguments":"{}"}}`)
+			var call ToolCall
+			err := call.UnmarshalJSON(data)
+			if err == nil {
+				t.Fatal("expected malformed tool call type to be rejected")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %q, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestToolCallUnmarshalRejectsOversizedName(t *testing.T) {
 	data := []byte(`{"id":"call_1","type":"function","function":{"name":"` + strings.Repeat("a", maxToolCallIdentifierBytes+1) + `","arguments":"{}"}}`)
 

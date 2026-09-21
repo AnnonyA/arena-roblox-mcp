@@ -5,6 +5,25 @@ import (
 	"testing"
 )
 
+func TestToolCallUnmarshalAcceptsPartialStreamIdentifiers(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+	}{
+		{name: "missing id fragment", data: `{"id":"","type":"function","function":{"name":"read_script","arguments":""}}`},
+		{name: "missing name fragment", data: `{"id":"call_1","type":"function","function":{"name":"","arguments":""}}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var call ToolCall
+			if err := call.UnmarshalJSON([]byte(tt.data)); err != nil {
+				t.Fatalf("partial streaming tool call should decode before final assembly validation: %v", err)
+			}
+		})
+	}
+}
+
 func TestToolCallUnmarshalRejectsOversizedID(t *testing.T) {
 	data := []byte(`{"id":"` + strings.Repeat("a", maxToolCallIdentifierBytes+1) + `","type":"function","function":{"name":"read_script","arguments":"{}"}}`)
 

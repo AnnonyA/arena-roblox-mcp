@@ -31,16 +31,31 @@ func TestToolCallUnmarshalRejectsOversizedName(t *testing.T) {
 	}
 }
 
-func TestToolCallUnmarshalAcceptsIdentifiersAtSizeLimit(t *testing.T) {
+func TestToolCallUnmarshalRejectsOversizedArguments(t *testing.T) {
+	arguments := strings.Repeat("a", maxToolCallArgumentsBytes+1)
+	data := []byte(`{"id":"call_1","type":"function","function":{"name":"write_script","arguments":"` + arguments + `"}}`)
+
+	var call ToolCall
+	err := call.UnmarshalJSON(data)
+	if err == nil {
+		t.Fatal("expected oversized tool call arguments to be rejected")
+	}
+	if !strings.Contains(err.Error(), "arguments exceed") {
+		t.Fatalf("error = %q, want arguments size validation error", err)
+	}
+}
+
+func TestToolCallUnmarshalAcceptsFieldsAtSizeLimits(t *testing.T) {
 	id := strings.Repeat("a", maxToolCallIdentifierBytes)
 	name := strings.Repeat("b", maxToolCallIdentifierBytes)
-	data := []byte(`{"id":"` + id + `","type":"function","function":{"name":"` + name + `","arguments":"{}"}}`)
+	arguments := strings.Repeat("c", maxToolCallArgumentsBytes)
+	data := []byte(`{"id":"` + id + `","type":"function","function":{"name":"` + name + `","arguments":"` + arguments + `"}}`)
 
 	var call ToolCall
 	if err := call.UnmarshalJSON(data); err != nil {
-		t.Fatalf("expected identifiers at size limit to be accepted: %v", err)
+		t.Fatalf("expected tool call fields at size limits to be accepted: %v", err)
 	}
-	if call.ID != id || call.Function.Name != name {
-		t.Fatalf("unexpected decoded identifiers: id=%q name=%q", call.ID, call.Function.Name)
+	if call.ID != id || call.Function.Name != name || call.Function.Arguments != arguments {
+		t.Fatal("unexpected decoded tool call fields")
 	}
 }

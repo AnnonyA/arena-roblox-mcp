@@ -11,6 +11,8 @@ import (
 	"unicode/utf8"
 )
 
+const maxToolNameBytes = 4096
+
 var ErrNoDiscoverer = errors.New("mcp tool discoverer is not configured")
 
 type Tool struct {
@@ -117,6 +119,9 @@ func validateToolNames(tools []Tool) error {
 		}
 		if trimmed != tool.Name {
 			return fmt.Errorf("MCP tool name %q at index %d has surrounding whitespace", tool.Name, i)
+		}
+		if len(tool.Name) > maxToolNameBytes {
+			return fmt.Errorf("MCP tool name at index %d exceeds %d bytes", i, maxToolNameBytes)
 		}
 		if strings.IndexFunc(tool.Name, unicode.IsControl) >= 0 {
 			return fmt.Errorf("MCP tool name %q at index %d contains a control character", tool.Name, i)

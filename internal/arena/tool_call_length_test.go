@@ -37,6 +37,19 @@ func TestToolCallUnmarshalRejectsOversizedID(t *testing.T) {
 	}
 }
 
+func TestToolCallUnmarshalRejectsOversizedType(t *testing.T) {
+	data := []byte(`{"id":"call_1","type":"` + strings.Repeat("a", maxToolCallIdentifierBytes+1) + `","function":{"name":"read_script","arguments":"{}"}}`)
+
+	var call ToolCall
+	err := call.UnmarshalJSON(data)
+	if err == nil {
+		t.Fatal("expected oversized tool call type to be rejected")
+	}
+	if !strings.Contains(err.Error(), "type exceeds") {
+		t.Fatalf("error = %q, want type size validation error", err)
+	}
+}
+
 func TestToolCallUnmarshalRejectsOversizedName(t *testing.T) {
 	data := []byte(`{"id":"call_1","type":"function","function":{"name":"` + strings.Repeat("a", maxToolCallIdentifierBytes+1) + `","arguments":"{}"}}`)
 
@@ -66,15 +79,16 @@ func TestToolCallUnmarshalRejectsOversizedArguments(t *testing.T) {
 
 func TestToolCallUnmarshalAcceptsFieldsAtSizeLimits(t *testing.T) {
 	id := strings.Repeat("a", maxToolCallIdentifierBytes)
+	callType := strings.Repeat("t", maxToolCallIdentifierBytes)
 	name := strings.Repeat("b", maxToolCallIdentifierBytes)
 	arguments := strings.Repeat("c", maxToolCallArgumentsBytes)
-	data := []byte(`{"id":"` + id + `","type":"function","function":{"name":"` + name + `","arguments":"` + arguments + `"}}`)
+	data := []byte(`{"id":"` + id + `","type":"` + callType + `","function":{"name":"` + name + `","arguments":"` + arguments + `"}}`)
 
 	var call ToolCall
 	if err := call.UnmarshalJSON(data); err != nil {
 		t.Fatalf("expected tool call fields at size limits to be accepted: %v", err)
 	}
-	if call.ID != id || call.Function.Name != name || call.Function.Arguments != arguments {
+	if call.ID != id || call.Type != callType || call.Function.Name != name || call.Function.Arguments != arguments {
 		t.Fatal("unexpected decoded tool call fields")
 	}
 }

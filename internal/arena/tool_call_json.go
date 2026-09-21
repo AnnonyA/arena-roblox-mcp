@@ -45,6 +45,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return err
 	}
+	if decoded.Index < 0 {
+		return fmt.Errorf("negative tool call index %d", decoded.Index)
+	}
 	if err := validateToolCallField("id", decoded.ID); err != nil {
 		return err
 	}

@@ -5,6 +5,32 @@ import (
 	"testing"
 )
 
+func TestToolCallUnmarshalRejectsEmptyID(t *testing.T) {
+	data := []byte(`{"id":"","type":"function","function":{"name":"read_script","arguments":"{}"}}`)
+
+	var call ToolCall
+	err := call.UnmarshalJSON(data)
+	if err == nil {
+		t.Fatal("expected empty tool call id to be rejected")
+	}
+	if !strings.Contains(err.Error(), "id is empty") {
+		t.Fatalf("error = %q, want empty id validation error", err)
+	}
+}
+
+func TestToolCallUnmarshalRejectsEmptyName(t *testing.T) {
+	data := []byte(`{"id":"call_1","type":"function","function":{"name":"","arguments":"{}"}}`)
+
+	var call ToolCall
+	err := call.UnmarshalJSON(data)
+	if err == nil {
+		t.Fatal("expected empty tool call name to be rejected")
+	}
+	if !strings.Contains(err.Error(), "name is empty") {
+		t.Fatalf("error = %q, want empty name validation error", err)
+	}
+}
+
 func TestToolCallUnmarshalRejectsOversizedID(t *testing.T) {
 	data := []byte(`{"id":"` + strings.Repeat("a", maxToolCallIdentifierBytes+1) + `","type":"function","function":{"name":"read_script","arguments":"{}"}}`)
 

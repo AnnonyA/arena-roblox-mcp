@@ -41,8 +41,22 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("tool call id contains format character")
 		}
 	}
+	if strings.TrimSpace(decoded.Type) != decoded.Type {
+		return fmt.Errorf("tool call type contains surrounding whitespace")
+	}
 	if len(decoded.Type) > maxToolCallIdentifierBytes {
 		return fmt.Errorf("tool call type exceeds %d bytes", maxToolCallIdentifierBytes)
+	}
+	for _, r := range decoded.Type {
+		if unicode.IsControl(r) {
+			return fmt.Errorf("tool call type contains control character")
+		}
+		if r == '\u2028' || r == '\u2029' {
+			return fmt.Errorf("tool call type contains line separator")
+		}
+		if unicode.Is(unicode.Cf, r) {
+			return fmt.Errorf("tool call type contains format character")
+		}
 	}
 	if strings.TrimSpace(decoded.Function.Name) != decoded.Function.Name {
 		return fmt.Errorf("tool call name contains surrounding whitespace")

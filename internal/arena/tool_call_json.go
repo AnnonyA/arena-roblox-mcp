@@ -8,6 +8,8 @@ import (
 	"unicode/utf8"
 )
 
+const maxToolCallIdentifierBytes = 4096
+
 func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	if !utf8.Valid(data) {
 		return fmt.Errorf("tool call contains invalid UTF-8")
@@ -22,6 +24,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	if strings.TrimSpace(decoded.ID) != decoded.ID {
 		return fmt.Errorf("tool call id contains surrounding whitespace")
 	}
+	if len(decoded.ID) > maxToolCallIdentifierBytes {
+		return fmt.Errorf("tool call id exceeds %d bytes", maxToolCallIdentifierBytes)
+	}
 	for _, r := range decoded.ID {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("tool call id contains control character")
@@ -35,6 +40,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	}
 	if strings.TrimSpace(decoded.Function.Name) != decoded.Function.Name {
 		return fmt.Errorf("tool call name contains surrounding whitespace")
+	}
+	if len(decoded.Function.Name) > maxToolCallIdentifierBytes {
+		return fmt.Errorf("tool call name exceeds %d bytes", maxToolCallIdentifierBytes)
 	}
 	for _, r := range decoded.Function.Name {
 		if unicode.IsControl(r) {

@@ -8,7 +8,10 @@ import (
 	"unicode/utf8"
 )
 
-const maxToolCallIdentifierBytes = 4096
+const (
+	maxToolCallIdentifierBytes = 4096
+	maxToolCallArgumentsBytes  = 1024 * 1024
+)
 
 func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	if !utf8.Valid(data) {
@@ -54,6 +57,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if unicode.Is(unicode.Cf, r) {
 			return fmt.Errorf("tool call name contains format character")
 		}
+	}
+	if len(decoded.Function.Arguments) > maxToolCallArgumentsBytes {
+		return fmt.Errorf("tool call arguments exceed %d bytes", maxToolCallArgumentsBytes)
 	}
 	*call = ToolCall(decoded)
 	return nil

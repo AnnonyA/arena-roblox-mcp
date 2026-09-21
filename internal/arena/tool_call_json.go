@@ -41,6 +41,9 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("tool call id contains format character")
 		}
 	}
+	if len(decoded.Type) > maxToolCallIdentifierBytes {
+		return fmt.Errorf("tool call type exceeds %d bytes", maxToolCallIdentifierBytes)
+	}
 	if strings.TrimSpace(decoded.Function.Name) != decoded.Function.Name {
 		return fmt.Errorf("tool call name contains surrounding whitespace")
 	}

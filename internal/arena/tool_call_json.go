@@ -24,9 +24,6 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return err
 	}
-	if decoded.ID == "" {
-		return fmt.Errorf("tool call id is empty")
-	}
 	if strings.TrimSpace(decoded.ID) != decoded.ID {
 		return fmt.Errorf("tool call id contains surrounding whitespace")
 	}
@@ -43,9 +40,6 @@ func (call *ToolCall) UnmarshalJSON(data []byte) error {
 		if unicode.Is(unicode.Cf, r) {
 			return fmt.Errorf("tool call id contains format character")
 		}
-	}
-	if decoded.Function.Name == "" {
-		return fmt.Errorf("tool call name is empty")
 	}
 	if strings.TrimSpace(decoded.Function.Name) != decoded.Function.Name {
 		return fmt.Errorf("tool call name contains surrounding whitespace")

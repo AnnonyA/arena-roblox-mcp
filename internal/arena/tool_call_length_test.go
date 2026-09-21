@@ -5,29 +5,22 @@ import (
 	"testing"
 )
 
-func TestToolCallUnmarshalRejectsEmptyID(t *testing.T) {
-	data := []byte(`{"id":"","type":"function","function":{"name":"read_script","arguments":"{}"}}`)
-
-	var call ToolCall
-	err := call.UnmarshalJSON(data)
-	if err == nil {
-		t.Fatal("expected empty tool call id to be rejected")
+func TestToolCallUnmarshalAcceptsPartialStreamIdentifiers(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+	}{
+		{name: "missing id fragment", data: `{"id":"","type":"function","function":{"name":"read_script","arguments":""}}`},
+		{name: "missing name fragment", data: `{"id":"call_1","type":"function","function":{"name":"","arguments":""}}`},
 	}
-	if !strings.Contains(err.Error(), "id is empty") {
-		t.Fatalf("error = %q, want empty id validation error", err)
-	}
-}
 
-func TestToolCallUnmarshalRejectsEmptyName(t *testing.T) {
-	data := []byte(`{"id":"call_1","type":"function","function":{"name":"","arguments":"{}"}}`)
-
-	var call ToolCall
-	err := call.UnmarshalJSON(data)
-	if err == nil {
-		t.Fatal("expected empty tool call name to be rejected")
-	}
-	if !strings.Contains(err.Error(), "name is empty") {
-		t.Fatalf("error = %q, want empty name validation error", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var call ToolCall
+			if err := call.UnmarshalJSON([]byte(tt.data)); err != nil {
+				t.Fatalf("partial streaming tool call should decode before final assembly validation: %v", err)
+			}
+		})
 	}
 }
 

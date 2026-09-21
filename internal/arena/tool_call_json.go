@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 func (call *ToolCall) UnmarshalJSON(data []byte) error {
+	if !utf8.Valid(data) {
+		return fmt.Errorf("tool call contains invalid UTF-8")
+	}
+
 	type toolCallAlias ToolCall
 
 	var decoded toolCallAlias

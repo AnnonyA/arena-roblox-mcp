@@ -27,7 +27,9 @@ func NewClient(opts ClientOptions) *Client {
 	if hc == nil {
 		hc = &http.Client{Timeout: 60 * time.Second}
 	}
-	return &Client{baseURL: strings.TrimRight(opts.BaseURL, "/"), apiKey: opts.APIKey, http: hc}
+	baseURL := strings.TrimSpace(opts.BaseURL)
+	baseURL = strings.TrimRight(baseURL, "/")
+	return &Client{baseURL: baseURL, apiKey: opts.APIKey, http: hc}
 }
 
 func arenaStatusError(operation string, status int) error {

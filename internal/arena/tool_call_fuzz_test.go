@@ -36,7 +36,11 @@ func FuzzToolCallValidation(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, index int, id, callType, name, arguments string) {
-		if !utf8.ValidString(id) || !utf8.ValidString(callType) || !utf8.ValidString(name) || !utf8.ValidString(arguments) {
+		validUTF8 := utf8.ValidString(id) &&
+			utf8.ValidString(callType) &&
+			utf8.ValidString(name) &&
+			utf8.ValidString(arguments)
+		if !validUTF8 {
 			t.Skip()
 		}
 
@@ -72,7 +76,7 @@ func FuzzToolCallValidation(f *testing.F) {
 				if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
 					t.Fatalf("json.Unmarshal accepted unsafe rune U+%04X in tool call %s %q", r, field, value)
 				}
-		}
+			}
 		}
 	})
 }

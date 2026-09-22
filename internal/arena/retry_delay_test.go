@@ -84,6 +84,15 @@ func TestRetryAfterDelayCapsDurationOverflow(t *testing.T) {
 	}
 }
 
+func TestRetryAfterDelayCapsIntegerParseOverflow(t *testing.T) {
+	t.Parallel()
+
+	got := retryAfterDelay("9223372036854775808", time.Unix(0, 0))
+	if got != maxRetryDelay {
+		t.Fatalf("retry delay = %v, want maximum %v for integer-overflowing Retry-After", got, maxRetryDelay)
+	}
+}
+
 func TestRetryableStatusOnlyAccepts429And5xx(t *testing.T) {
 	t.Parallel()
 

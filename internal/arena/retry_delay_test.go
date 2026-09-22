@@ -125,3 +125,16 @@ func TestRetryableStatusOnlyAccepts429And5xx(t *testing.T) {
 		}
 	}
 }
+
+func FuzzRetryableStatusBounds(f *testing.F) {
+	for _, seed := range []int{0, 428, 429, 430, 499, 500, 599, 600, 700} {
+		f.Add(seed)
+	}
+
+	f.Fuzz(func(t *testing.T, status int) {
+		want := status == http.StatusTooManyRequests || (status >= 500 && status <= 599)
+		if got := retryableStatus(status); got != want {
+			t.Fatalf("retryableStatus(%d) = %v, want %v", status, got, want)
+		}
+	})
+}

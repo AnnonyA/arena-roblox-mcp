@@ -35,6 +35,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if c.http == nil {
 		return nil, fmt.Errorf("list Arena models: HTTP client is nil")
 	}
+	if c.baseURL == "" {
+		return nil, fmt.Errorf("list Arena models: base URL is empty")
+	}
 
 	var resp *http.Response
 	for attempt := 0; attempt < 3; attempt++ {

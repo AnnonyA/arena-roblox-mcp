@@ -334,6 +334,9 @@ func retryAfterDelay(value string, now time.Time) time.Duration {
 		}
 		return delay
 	}
+	if value != "" && strings.IndexFunc(value, func(r rune) bool { return r < '0' || r > '9' }) == -1 {
+		return maxRetryDelay
+	}
 	if at, err := http.ParseTime(value); err == nil {
 		if !at.After(now) {
 			return 0

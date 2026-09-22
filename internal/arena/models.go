@@ -26,6 +26,9 @@ type modelsResponse struct {
 }
 
 func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
+	if c == nil {
+		return nil, fmt.Errorf("list Arena models: client is nil")
+	}
 	if ctx == nil {
 		return nil, fmt.Errorf("list Arena models: context is nil")
 	}

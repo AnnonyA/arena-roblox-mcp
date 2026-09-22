@@ -10,36 +10,44 @@ import (
 
 func FuzzToolCallValidation(f *testing.F) {
 	for _, seed := range []struct {
+		index     int
 		id        string
 		callType  string
 		name      string
 		arguments string
 	}{
-		{id: "call-1", callType: "function", name: "inspect", arguments: "{}"},
-		{id: " call-1", callType: "function", name: "inspect", arguments: "{}"},
-		{id: "call\n1", callType: "function", name: "inspect", arguments: "{}"},
-		{id: "call\u200b1", callType: "function", name: "inspect", arguments: "{}"},
-		{id: "call\u20281", callType: "function", name: "inspect", arguments: "{}"},
-		{id: "call-1", callType: " function", name: "inspect", arguments: "{}"},
-		{id: "call-1", callType: "func\u2060tion", name: "inspect", arguments: "{}"},
-		{id: "call-1", callType: "function\u2029", name: "inspect", arguments: "{}"},
-		{id: "call-1", callType: "function", name: "ins\u2060pect", arguments: "{}"},
-		{id: "call-1", callType: "function", name: "inspect\u2029", arguments: "{}"},
-		{id: "呼び出し-1", callType: "関数", name: "検査", arguments: `{"対象":"Workspace"}`},
-		{id: "call-1", callType: "function", name: "inspect", arguments: ""},
-		{id: "call-1", callType: "function", name: "inspect", arguments: `{"path":"Workspace.Part"}`},
+		{index: 0, id: "call-1", callType: "function", name: "inspect", arguments: "{}"},
+		{index: 1, id: "call-1", callType: "function", name: "inspect", arguments: "{}"},
+		{index: -1, id: "call-1", callType: "function", name: "inspect", arguments: "{}"},
+		{index: 0, id: " call-1", callType: "function", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call\n1", callType: "function", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call\u200b1", callType: "function", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call\u20281", callType: "function", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call-1", callType: " function", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call-1", callType: "func\u2060tion", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call-1", callType: "function\u2029", name: "inspect", arguments: "{}"},
+		{index: 0, id: "call-1", callType: "function", name: "ins\u2060pect", arguments: "{}"},
+		{index: 0, id: "call-1", callType: "function", name: "inspect\u2029", arguments: "{}"},
+		{index: 0, id: "呼び出し-1", callType: "関数", name: "検査", arguments: `{"対象":"Workspace"}`},
+		{index: 0, id: "call-1", callType: "function", name: "inspect", arguments: ""},
+		{index: 0, id: "call-1", callType: "function", name: "inspect", arguments: `{"path":"Workspace.Part"}`},
 	} {
-		f.Add(seed.id, seed.callType, seed.name, seed.arguments)
+		f.Add(seed.index, seed.id, seed.callType, seed.name, seed.arguments)
 	}
 
-	f.Fuzz(func(t *testing.T, id, callType, name, arguments string) {
-		if !utf8.ValidString(id) || !utf8.ValidString(callType) || !utf8.ValidString(name) || !utf8.ValidString(arguments) {
+	f.Fuzz(func(t *testing.T, index int, id, callType, name, arguments string) {
+		validUTF8 := utf8.ValidString(id) &&
+			utf8.ValidString(callType) &&
+			utf8.ValidString(name) &&
+			utf8.ValidString(arguments)
+		if !validUTF8 {
 			t.Skip()
 		}
 
 		payload, err := json.Marshal(map[string]any{
-			"id":   id,
-			"type": callType,
+			"index": index,
+			"id":    id,
+			"type":  callType,
 			"function": map[string]any{
 				"name":      name,
 				"arguments": arguments,
@@ -53,8 +61,11 @@ func FuzzToolCallValidation(f *testing.F) {
 		if err := json.Unmarshal(payload, &call); err != nil {
 			return
 		}
-		if call.ID != id || call.Type != callType || call.Function.Name != name || call.Function.Arguments != arguments {
-			t.Fatalf("json.Unmarshal changed tool call fields: got id=%q type=%q name=%q arguments=%q, want id=%q type=%q name=%q arguments=%q", call.ID, call.Type, call.Function.Name, call.Function.Arguments, id, callType, name, arguments)
+		if call.Index != index || call.ID != id || call.Type != callType || call.Function.Name != name || call.Function.Arguments != arguments {
+			t.Fatalf("json.Unmarshal changed tool call fields: got index=%d id=%q type=%q name=%q arguments=%q, want index=%d id=%q type=%q name=%q arguments=%q", call.Index, call.ID, call.Type, call.Function.Name, call.Function.Arguments, index, id, callType, name, arguments)
+		}
+		if index < 0 {
+			t.Fatalf("json.Unmarshal accepted negative tool call index %d", index)
 		}
 
 		for field, value := range map[string]string{"id": id, "type": callType, "name": name} {

@@ -35,7 +35,7 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if c.http == nil {
 		return nil, fmt.Errorf("list Arena models: HTTP client is nil")
 	}
-	if c.baseURL == "" {
+	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, fmt.Errorf("list Arena models: base URL is empty")
 	}
 

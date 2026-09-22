@@ -84,13 +84,18 @@ func TestRetryAfterDelayCapsDurationOverflow(t *testing.T) {
 	}
 }
 
-func TestRetryAfterDelayCapsIntegerParseOverflow(t *testing.T) {
-	t.Parallel()
-
-	got := retryAfterDelay("9223372036854775808", time.Unix(0, 0))
-	if got != maxRetryDelay {
-		t.Fatalf("retry delay = %v, want maximum %v for integer-overflowing Retry-After", got, maxRetryDelay)
+func FuzzRetryAfterDelayStaysBounded(f *testing.F) {
+	for _, seed := range []string{"", "0", "2", "3600", "9223372036854775807", "Wed, 21 Oct 2015 07:28:00 GMT", "not-a-delay"} {
+		f.Add(seed)
 	}
+
+	now := time.Date(2026, time.September, 7, 18, 0, 0, 0, time.UTC)
+	f.Fuzz(func(t *testing.T, value string) {
+		got := retryAfterDelay(value, now)
+		if got < 0 || got > maxRetryDelay {
+			t.Fatalf("retryAfterDelay(%q) = %v, want delay in [0, %v]", value, got, maxRetryDelay)
+		}
+	})
 }
 
 func TestRetryableStatusOnlyAccepts429And5xx(t *testing.T) {

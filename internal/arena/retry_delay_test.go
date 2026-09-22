@@ -84,6 +84,15 @@ func TestRetryAfterDelayCapsDurationOverflow(t *testing.T) {
 	}
 }
 
+func TestRetryAfterDelayCapsIntegerParseOverflow(t *testing.T) {
+	t.Parallel()
+
+	got := retryAfterDelay("92233720368547758070", time.Unix(0, 0))
+	if got != maxRetryDelay {
+		t.Fatalf("retry delay = %v, want maximum %v for integer-overflowing Retry-After", got, maxRetryDelay)
+	}
+}
+
 func FuzzRetryAfterDelayStaysBounded(f *testing.F) {
 	for _, seed := range []string{"", "0", "2", "3600", "9223372036854775807", "Wed, 21 Oct 2015 07:28:00 GMT", "not-a-delay"} {
 		f.Add(seed)

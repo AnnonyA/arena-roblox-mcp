@@ -32,6 +32,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("list Arena models: context is nil")
 	}
+	if c.http == nil {
+		return nil, fmt.Errorf("list Arena models: HTTP client is nil")
+	}
 
 	var resp *http.Response
 	for attempt := 0; attempt < 3; attempt++ {

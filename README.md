@@ -87,6 +87,16 @@ Without a configured model, use `/models` to discover models from Arena and `/mo
 
 Any non-empty line that does not start with `/` is treated as a task.
 
+## Troubleshooting
+
+If startup reports that the Arena API key is not configured, set the environment variable named by `arena.apiKeyEnv` (the default is `ARENA_API_KEY`) or put that variable in a local `.env` file. Existing process environment variables take precedence over `.env` values.
+
+If Arena returns an authentication failure, verify the configured key without pasting it into issues, logs, screenshots, or chat. Both HTTP 401 and 403 responses are intentionally reported with the same non-secret-bearing authentication message.
+
+If Roblox Studio is unavailable, keep the CLI open and use `/status` to inspect Arena/MCP/Studio state. Start Studio and its official MCP integration, then reconnect through the normal session flow rather than repeatedly restarting the CLI. When multiple Studio sessions are available, use `/studio` to select the intended one instead of guessing.
+
+For model-selection problems, run `/models` to refresh the dynamically discovered Arena model list, then select an exact returned ID with `/model <id>`.
+
 ## Security
 
 - Keep `ARENA_API_KEY` outside source control.

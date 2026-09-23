@@ -2,7 +2,9 @@ package arena
 
 import (
 	"net/http"
+	"net/http/cookiejar"
 	"testing"
+	"time"
 )
 
 func TestNewClientDoesNotMutateCallerHTTPClient(t *testing.T) {
@@ -38,5 +40,41 @@ func TestNewClientDoesNotMutateCallerHTTPClient(t *testing.T) {
 	}
 	if redirectCalls != 1 {
 		t.Fatalf("Arena redirect policy invoked caller policy; calls = %d, want 1", redirectCalls)
+	}
+}
+
+func TestNewClientClonePreservesCallerHTTPSettings(t *testing.T) {
+	t.Parallel()
+
+	transport := &http.Transport{MaxIdleConns: 7}
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatalf("create cookie jar: %v", err)
+	}
+	caller := &http.Client{
+		Transport: transport,
+		Jar:       jar,
+		Timeout:   23 * time.Second,
+	}
+
+	arenaClient := NewClient(ClientOptions{
+		BaseURL:    "https://example.invalid",
+		HTTPClient: caller,
+	})
+
+	if arenaClient.http.Transport != transport {
+		t.Fatal("Arena client did not preserve caller transport")
+	}
+	if arenaClient.http.Jar != jar {
+		t.Fatal("Arena client did not preserve caller cookie jar")
+	}
+	if arenaClient.http.Timeout != caller.Timeout {
+		t.Fatalf("Arena client timeout = %v, want %v", arenaClient.http.Timeout, caller.Timeout)
+	}
+	if caller.CheckRedirect != nil {
+		t.Fatal("NewClient unexpectedly installed redirect policy on caller client")
+	}
+	if arenaClient.http.CheckRedirect == nil {
+		t.Fatal("Arena client did not install redirect protection on clone")
 	}
 }

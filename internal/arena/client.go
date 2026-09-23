@@ -27,9 +27,17 @@ func NewClient(opts ClientOptions) *Client {
 	if hc == nil {
 		hc = &http.Client{Timeout: 60 * time.Second}
 	}
+	// Keep Arena credentials on the configured origin. In particular, do not
+	// allow an API response to redirect an authenticated request to another
+	// host. Clone caller-provided clients so enforcing this does not mutate
+	// shared client configuration outside this package.
+	client := *hc
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
 	baseURL := strings.TrimSpace(opts.BaseURL)
 	baseURL = strings.TrimRight(baseURL, "/")
-	return &Client{baseURL: baseURL, apiKey: opts.APIKey, http: hc}
+	return &Client{baseURL: baseURL, apiKey: opts.APIKey, http: &client}
 }
 
 func arenaStatusError(operation string, status int) error {

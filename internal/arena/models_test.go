@@ -81,3 +81,17 @@ func TestListModelsRetriesTransientFailures(t *testing.T) {
 		t.Fatalf("models = %#v", got)
 	}
 }
+
+func TestListModelsRejectsBaseURLUserinfo(t *testing.T) {
+	t.Parallel()
+
+	c := NewClient(ClientOptions{BaseURL: "https://user:password@api.arena.ai"})
+	_, err := c.ListModels(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	const want = "list Arena models: base URL must not contain userinfo"
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err, want)
+	}
+}

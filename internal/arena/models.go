@@ -43,6 +43,9 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	if err != nil || (baseURL.Scheme != "http" && baseURL.Scheme != "https") || baseURL.Host == "" {
 		return nil, fmt.Errorf("list Arena models: base URL must use http or https")
 	}
+	if baseURL.RawQuery != "" || baseURL.Fragment != "" {
+		return nil, fmt.Errorf("list Arena models: base URL must not contain query or fragment")
+	}
 
 	var resp *http.Response
 	for attempt := 0; attempt < 3; attempt++ {

@@ -33,7 +33,7 @@ func NewClient(opts ClientOptions) *Client {
 }
 
 func arenaStatusError(operation string, status int) error {
-	if status == http.StatusUnauthorized {
+	if status == http.StatusUnauthorized || status == http.StatusForbidden {
 		return fmt.Errorf("Arena authentication failed. Check your API key.")
 	}
 	if status == http.StatusTooManyRequests {

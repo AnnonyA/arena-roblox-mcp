@@ -92,7 +92,9 @@ Any non-empty line that does not start with `/` is treated as a task.
 - Keep `ARENA_API_KEY` outside source control.
 - Never put a real key in `arena-rbx.json`, issues, logs, screenshots, or commits.
 - Safe mode defaults to enabled.
-- Reversible-write and high-risk behavior is being built around the approved v0.1 safety model; review the current implementation before relying on automated mutations.
+- Read operations may run automatically. Reversible writes are journaled with prior state so supported changes can be inspected with `/diff` and reverted with `/undo`.
+- High-risk operations require explicit confirmation while safe mode is enabled; `--allow-dangerous` is an explicit process-lifetime opt-out and is never enabled by default or persisted silently.
+- `/undo` only guarantees the latest journaled action explicitly marked reversible; it does not imply that irreversible actions can be restored.
 
 ## Development
 

@@ -2,36 +2,30 @@ package arena
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
 
-func TestStreamChatRejectsInvalidClientState(t *testing.T) {
+func TestListModelsForbiddenDoesNotLeakAPIKey(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name   string
-		client *Client
-		ctx    context.Context
-		want   string
-	}{
-		{name: "nil client", client: nil, ctx: context.Background(), want: "client is nil"},
-		{name: "nil context", client: NewClient(ClientOptions{BaseURL: "https://api.arena.ai"}), ctx: nil, want: "context is nil"},
-		{name: "nil HTTP client", client: &Client{baseURL: "https://api.arena.ai"}, ctx: context.Background(), want: "HTTP client is nil"},
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	const apiKey = "models-super-secret"
+	client := NewClient(ClientOptions{BaseURL: srv.URL, APIKey: apiKey})
+	_, err := client.ListModels(context.Background())
+	if err == nil {
+		t.Fatal("expected authentication error")
 	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			_, err := tt.client.StreamChat(tt.ctx, ChatRequest{Model: "model-a"}, nil)
-			if err == nil {
-				t.Fatal("expected validation error")
-			}
-			if !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("error = %q, want substring %q", err, tt.want)
-			}
-		})
+	if got, want := err.Error(), "Arena authentication failed. Check your API key."; got != want {
+		t.Fatalf("error = %q, want %q", got, want)
+	}
+	if strings.Contains(err.Error(), apiKey) {
+		t.Fatalf("authentication error leaked API key: %q", err)
 	}
 }

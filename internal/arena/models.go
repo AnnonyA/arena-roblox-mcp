@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -37,6 +38,10 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 	}
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil, fmt.Errorf("list Arena models: base URL is empty")
+	}
+	baseURL, err := url.Parse(c.baseURL)
+	if err != nil || (baseURL.Scheme != "http" && baseURL.Scheme != "https") || baseURL.Host == "" {
+		return nil, fmt.Errorf("list Arena models: base URL must use http or https")
 	}
 
 	var resp *http.Response

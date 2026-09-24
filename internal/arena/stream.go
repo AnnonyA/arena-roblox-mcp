@@ -193,52 +193,49 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 						call.ID = fragment.ID
 						callIDs[fragment.ID] = fragment.Index
 					} else if call.ID != fragment.ID {
-						return false, fmt.Errorf("conflicting tool call id for index %d: %q then %q", fragment.Index, call.ID, fragment.ID)
+						return false, fmt.Errorf("conflicting tool call id for index %d", fragment.Index)
 					}
 				}
 				if fragment.Type != "" {
+					if call.Type != "" && call.Type != fragment.Type {
+						return false, fmt.Errorf("conflicting tool call type for index %d", fragment.Index)
+					}
 					if fragment.Type != "function" {
 						return false, fmt.Errorf("unsupported tool call type %q for index %d", fragment.Type, fragment.Index)
 					}
 					if call.Type == "" {
 						call.Type = fragment.Type
-					} else if call.Type != fragment.Type {
-						return false, fmt.Errorf("conflicting tool call type for index %d: %q then %q", fragment.Index, call.Type, fragment.Type)
 					}
 				}
-				if fragment.Function.Name != "" {
-					if len(fragment.Function.Name) > maxStreamToolCallNameBytes {
-						return false, fmt.Errorf("tool call name exceeds %d bytes for index %d", maxStreamToolCallNameBytes, fragment.Index)
-					}
-					if err := validateStreamToolName(fragment.Function.Name); err != nil {
-						return false, fmt.Errorf("invalid tool call name for index %d: %w", fragment.Index, err)
-					}
-					if call.Function.Name == "" {
-						call.Function.Name = fragment.Function.Name
-					} else if call.Function.Name != fragment.Function.Name {
-						if strings.HasPrefix(fragment.Function.Name, call.Function.Name) {
-							call.Function.Name = fragment.Function.Name
-						} else if !strings.HasPrefix(call.Function.Name, fragment.Function.Name) {
-							return false, fmt.Errorf("conflicting tool call name for index %d: %q then %q", fragment.Index, call.Function.Name, fragment.Function.Name)
-						}
-					}
+				name := fragment.Function.Name
+				switch {
+				case name == "":
+				case strings.HasPrefix(name, call.Function.Name):
+					call.Function.Name = name
+				default:
+					call.Function.Name += name
 				}
-				if fragment.Function.Arguments != "" {
-					if len(fragment.Function.Arguments) > maxStreamToolCallArgumentBytes {
-						return false, fmt.Errorf("tool call arguments exceed %d bytes for index %d", maxStreamToolCallArgumentBytes, fragment.Index)
-					}
-					arguments := fragment.Function.Arguments
-					if call.Function.Arguments != "" && strings.HasPrefix(arguments, call.Function.Arguments) {
-						arguments = strings.TrimPrefix(arguments, call.Function.Arguments)
-					}
-					if len(call.Function.Arguments)+len(arguments) > maxStreamToolCallArgumentBytes {
-						return false, fmt.Errorf("tool call arguments exceed %d bytes for index %d", maxStreamToolCallArgumentBytes, fragment.Index)
-					}
-					if totalToolCallArgumentBytes+len(arguments) > maxStreamTotalToolCallArgumentBytes {
+				if len(call.Function.Name) > maxStreamToolCallNameBytes {
+					return false, fmt.Errorf("tool call name exceeds %d bytes for index %d", maxStreamToolCallNameBytes, fragment.Index)
+				}
+				beforeArgumentBytes := len(call.Function.Arguments)
+				arguments := fragment.Function.Arguments
+				switch {
+				case arguments == "":
+				case strings.HasPrefix(arguments, call.Function.Arguments):
+					call.Function.Arguments = arguments
+				default:
+					call.Function.Arguments += arguments
+				}
+				if len(call.Function.Arguments) > maxStreamToolCallArgumentBytes {
+					return false, fmt.Errorf("tool call arguments exceed %d bytes for index %d", maxStreamToolCallArgumentBytes, fragment.Index)
+				}
+				addedArgumentBytes := len(call.Function.Arguments) - beforeArgumentBytes
+				if addedArgumentBytes > 0 {
+					totalToolCallArgumentBytes += addedArgumentBytes
+					if totalToolCallArgumentBytes > maxStreamTotalToolCallArgumentBytes {
 						return false, fmt.Errorf("total tool call arguments exceed %d bytes", maxStreamTotalToolCallArgumentBytes)
 					}
-					call.Function.Arguments += arguments
-					totalToolCallArgumentBytes += len(arguments)
 				}
 			}
 		}
@@ -246,58 +243,63 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 4096), maxSSELineBytes)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxSSELineBytes)
+	done := false
+	firstLine := true
 	var dataLines []string
-	eventBytes := 0
-	flushEvent := func() (bool, error) {
-		if len(dataLines) == 0 {
-			return false, nil
-		}
-		payload := strings.Join(dataLines, "\n")
-		dataLines = dataLines[:0]
-		eventBytes = 0
-		return processPayload(payload)
-	}
+	dataBytes := 0
 	for scanner.Scan() {
 		line := scanner.Text()
-		if line == "" {
-			done, err := flushEvent()
-			if err != nil {
-				return ChatResult{}, err
+		if !utf8.ValidString(line) {
+			return ChatResult{}, fmt.Errorf("Arena stream contains invalid UTF-8")
+		}
+		if firstLine {
+			line = strings.TrimPrefix(line, "\ufeff")
+			firstLine = false
+		}
+		if strings.HasPrefix(line, "data:") {
+			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+			if len(dataLines) >= maxSSEDataLines {
+				return ChatResult{}, fmt.Errorf("Arena SSE event has too many data lines: limit %d", maxSSEDataLines)
 			}
-			if done {
-				break
+			added := len(data)
+			if len(dataLines) > 0 {
+				added++
 			}
+			if dataBytes+added > maxSSEEventBytes {
+				return ChatResult{}, fmt.Errorf("Arena SSE event exceeds %d bytes", maxSSEEventBytes)
+			}
+			dataLines = append(dataLines, data)
+			dataBytes += added
 			continue
 		}
-		if strings.HasPrefix(line, ":") {
+		if line != "" || len(dataLines) == 0 {
 			continue
 		}
-		if !strings.HasPrefix(line, "data:") {
-			continue
+
+		payload := strings.Join(dataLines, "\n")
+		dataLines = dataLines[:0]
+		dataBytes = 0
+		done, err = processPayload(payload)
+		if err != nil {
+			return ChatResult{}, err
 		}
-		data := strings.TrimPrefix(line, "data:")
-		if strings.HasPrefix(data, " ") {
-			data = data[1:]
+		if done {
+			break
 		}
-		if len(dataLines) >= maxSSEDataLines {
-			return ChatResult{}, fmt.Errorf("Arena stream event exceeds %d data lines", maxSSEDataLines)
-		}
-		if eventBytes+len(data) > maxSSEEventBytes {
-			return ChatResult{}, fmt.Errorf("Arena stream event exceeds %d bytes", maxSSEEventBytes)
-		}
-		dataLines = append(dataLines, data)
-		eventBytes += len(data)
 	}
 	if err := scanner.Err(); err != nil {
 		return ChatResult{}, fmt.Errorf("read Arena stream: %w", err)
 	}
-	if len(dataLines) > 0 {
-		if _, err := flushEvent(); err != nil {
+	if !done && len(dataLines) > 0 {
+		done, err = processPayload(strings.Join(dataLines, "\n"))
+		if err != nil {
 			return ChatResult{}, err
 		}
 	}
-
+	if !done {
+		return ChatResult{}, fmt.Errorf("Arena stream ended before [DONE]")
+	}
 	indexes := make([]int, 0, len(calls))
 	for index := range calls {
 		indexes = append(indexes, index)
@@ -305,16 +307,22 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 	sort.Ints(indexes)
 	for _, index := range indexes {
 		call := calls[index]
-		if call.ID == "" {
-			return ChatResult{}, fmt.Errorf("tool call missing id for index %d", index)
+		if strings.TrimSpace(call.ID) == "" {
+			return ChatResult{}, fmt.Errorf("missing tool call id for index %d", index)
 		}
 		if call.Type == "" {
-			return ChatResult{}, fmt.Errorf("tool call missing type for index %d", index)
+			return ChatResult{}, fmt.Errorf("missing tool call type for index %d", index)
 		}
-		if call.Function.Name == "" {
-			return ChatResult{}, fmt.Errorf("tool call missing function name for index %d", index)
+		if strings.TrimSpace(call.Function.Name) == "" {
+			return ChatResult{}, fmt.Errorf("missing tool call name for index %d", index)
 		}
-		if err := validateToolCallArguments(call.Function.Arguments); err != nil {
+		if !json.Valid([]byte(call.Function.Arguments)) {
+			return ChatResult{}, fmt.Errorf("invalid tool call arguments for index %d", index)
+		}
+		if !strings.HasPrefix(strings.TrimSpace(call.Function.Arguments), "{") {
+			return ChatResult{}, fmt.Errorf("tool call arguments for index %d must be a JSON object", index)
+		}
+		if err := rejectDuplicateStreamJSONKeys([]byte(call.Function.Arguments)); err != nil {
 			return ChatResult{}, fmt.Errorf("invalid tool call arguments for index %d: %w", index, err)
 		}
 		result.ToolCalls = append(result.ToolCalls, *call)
@@ -323,19 +331,11 @@ func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(st
 }
 
 func retryableStatus(status int) bool {
-	return status == http.StatusTooManyRequests || status >= 500
+	return status == http.StatusTooManyRequests || (status >= 500 && status <= 599)
 }
 
 func waitRetry(ctx context.Context, retryAfter string) error {
-	delay := defaultRetryDelay
-	if retryAfter != "" {
-		if seconds, err := strconv.Atoi(strings.TrimSpace(retryAfter)); err == nil && seconds >= 0 {
-			delay = time.Duration(seconds) * time.Second
-			if delay > maxRetryDelay {
-				delay = maxRetryDelay
-			}
-		}
-	}
+	delay := retryAfterDelay(retryAfter, time.Now())
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 	select {
@@ -346,23 +346,30 @@ func waitRetry(ctx context.Context, retryAfter string) error {
 	}
 }
 
-func validateStreamToolName(name string) error {
-	if !utf8.ValidString(name) {
-		return fmt.Errorf("invalid UTF-8")
-	}
-	if strings.TrimSpace(name) != name {
-		return fmt.Errorf("surrounding whitespace")
-	}
-	for _, r := range name {
-		if r < 0x20 || r == 0x7f {
-			return fmt.Errorf("control character")
+func retryAfterDelay(value string, now time.Time) time.Duration {
+	value = strings.TrimSpace(value)
+	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil && seconds >= 0 {
+		if seconds > int64((time.Duration(1<<63-1))/time.Second) {
+			return maxRetryDelay
 		}
-		if r == '\u2028' || r == '\u2029' {
-			return fmt.Errorf("line separator")
+		delay := time.Duration(seconds) * time.Second
+		if delay > maxRetryDelay {
+			return maxRetryDelay
 		}
-		if r >= '\u202a' && r <= '\u202e' || r >= '\u2066' && r <= '\u2069' {
-			return fmt.Errorf("bidirectional control character")
-		}
+		return delay
 	}
-	return nil
+	if value != "" && strings.IndexFunc(value, func(r rune) bool { return r < '0' || r > '9' }) == -1 {
+		return maxRetryDelay
+	}
+	if at, err := http.ParseTime(value); err == nil {
+		if !at.After(now) {
+			return 0
+		}
+		delay := at.Sub(now)
+		if delay > maxRetryDelay {
+			return maxRetryDelay
+		}
+		return delay
+	}
+	return defaultRetryDelay
 }

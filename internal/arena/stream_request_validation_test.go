@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+type validationRoundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f validationRoundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
 func TestStreamChatRejectsInvalidClientState(t *testing.T) {
 	t.Parallel()
 
@@ -46,7 +50,7 @@ func TestStreamChatValidationDoesNotPerformRequest(t *testing.T) {
 	called := false
 	client := NewClient(ClientOptions{
 		BaseURL: "https://user:pass@example.com",
-		HTTPClient: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		HTTPClient: &http.Client{Transport: validationRoundTripFunc(func(*http.Request) (*http.Response, error) {
 			called = true
 			return nil, nil
 		})},

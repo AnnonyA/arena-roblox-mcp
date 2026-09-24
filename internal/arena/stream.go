@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -66,6 +67,29 @@ type streamChunk struct {
 }
 
 func (c *Client) StreamChat(ctx context.Context, req ChatRequest, onText func(string)) (ChatResult, error) {
+	if c == nil {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: client is nil")
+	}
+	if ctx == nil {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: context is nil")
+	}
+	if c.http == nil {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: HTTP client is nil")
+	}
+	if strings.TrimSpace(c.baseURL) == "" {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: base URL is empty")
+	}
+	baseURL, err := url.Parse(c.baseURL)
+	if err != nil || (baseURL.Scheme != "http" && baseURL.Scheme != "https") || baseURL.Host == "" {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: base URL must use http or https")
+	}
+	if baseURL.User != nil {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: base URL must not contain userinfo")
+	}
+	if baseURL.RawQuery != "" || baseURL.Fragment != "" {
+		return ChatResult{}, fmt.Errorf("stream Arena chat: base URL must not contain query or fragment")
+	}
+
 	req.Stream = true
 	body, err := json.Marshal(req)
 	if err != nil {

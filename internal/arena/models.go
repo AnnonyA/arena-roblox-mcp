@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"strings"
@@ -84,6 +85,16 @@ func (c *Client) ListModels(ctx context.Context) ([]Model, error) {
 		}
 	}
 	defer resp.Body.Close()
+
+	if contentType := strings.TrimSpace(resp.Header.Get("Content-Type")); contentType != "" {
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			return nil, fmt.Errorf("decode Arena models: invalid Content-Type")
+		}
+		if mediaType != "application/json" && !strings.HasSuffix(mediaType, "+json") {
+			return nil, fmt.Errorf("decode Arena models: unexpected Content-Type %q", mediaType)
+		}
+	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxModelsResponseBytes+1))
 	if err != nil {
